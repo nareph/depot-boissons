@@ -1,0 +1,17 @@
+// src/ui/main_window.slint
+import { VerticalBox, HorizontalBox, LineEdit, Button, ProgressIndicator } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "Tableau de Bord - Dépôt de Boissons";
+    width: 800px;
+    height: 600px;
+    in-out property<string> welcome_message;
+
+    Text {
+        text: root.welcome_message;
+        font-size: 24px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+

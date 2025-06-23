@@ -1,0 +1,63 @@
+import { VerticalBox, HorizontalBox, LineEdit, Button, ProgressIndicator } from "std-widgets.slint";
+
+export component LoginWindow inherits Window {
+    title: "Connexion - Dépôt de Boissons";
+    width: 350px;
+    height: 250px;
+
+    in-out property<string> login_text: "";
+    in-out property<string> password_text: "";
+    in-out property<string> status_text: "";
+    in-out property<bool> loading: false;
+
+    callback login_clicked(string, string);
+    callback request_close();
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 10px;
+
+        Text {
+            text: "Veuillez vous connecter";
+            horizontal-alignment: center;
+            font-size: 18px;
+            color: #333;
+        }
+
+        LineEdit {
+            placeholder-text: "Email ou nom d'utilisateur";
+            text <=> root.login_text;
+            enabled: !root.loading;
+        }
+        
+        LineEdit {
+            placeholder-text: "Mot de passe";
+            input-type: InputType.password;
+            text <=> root.password_text;
+            enabled: !root.loading;
+        }
+
+        Button {
+            text: "Se connecter";
+            enabled: !root.loading && root.login_text != "" && root.password_text != "";
+            clicked => { root.login_clicked(root.login_text, root.password_text) }
+        }
+
+        HorizontalBox {
+            alignment: center;
+            spacing: 5px;
+            
+            ProgressIndicator {
+                width: 20px;
+                height: 20px;
+                indeterminate: true;
+                visible: root.loading;
+            }
+            
+            Text {
+                text: root.status_text;
+                color: root.status_text == "Mot de passe incorrect" || root.status_text == "Utilisateur non trouvé" || root.status_text == "Erreur de vérification" ? #ff0000 : (root.status_text == "Connexion réussie" ? #00aa00 : #555555);
+            }
+        }
+    }
+}

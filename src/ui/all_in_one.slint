@@ -1,0 +1,7 @@
+// D'abord, on importe les composants des autres fichiers
+import { LoginWindow } from "login.slint";
+import { ChangePasswordWindow } from "change_password.slint";
+import { MainWindow } from "main_window.slint";
+
+// Ensuite, on les ré-exporte pour que Rust puisse les voir
+export { LoginWindow, ChangePasswordWindow, MainWindow }
