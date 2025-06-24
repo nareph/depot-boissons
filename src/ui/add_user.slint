@@ -1,0 +1,35 @@
+// src/ui/add_user.slint
+
+import { VerticalBox, LineEdit, Button, ComboBox } from "std-widgets.slint";
+
+export component AddUserWindow inherits Window {
+    title: "Ajouter un nouvel utilisateur";
+    width: 400px;
+    height: 350px;
+
+    // Propriétés
+    in-out property<string> name_text: "";
+    in-out property<string> email_text: "";
+    in-out property<string> password_text: "";
+    in-out property<string> status_text: "";
+    in-out property<int> selected_role_index: 0;
+    in property<[string]> roles: ["User", "Admin"];
+
+    // Callbacks
+    callback save_clicked(string, string, string, string);
+    
+    VerticalBox {
+        padding: 20px;
+        spacing: 10px;
+        LineEdit { placeholder-text: "Nom complet"; text <=> root.name_text; }
+        LineEdit { placeholder-text: "Adresse e-mail"; text <=> root.email_text; }
+        LineEdit { placeholder-text: "Mot de passe temporaire"; text <=> root.password_text; }
+        ComboBox { model: root.roles; current-index <=> root.selected_role_index; }
+        Button {
+            text: "Enregistrer";
+            enabled: root.name_text != "" && root.email_text != "" && root.password_text != "";
+            clicked => { root.save_clicked(root.name_text, root.email_text, root.password_text, root.roles[root.selected_role_index]) }
+        }
+        Text { text: root.status_text; color: red; }
+    }
+}

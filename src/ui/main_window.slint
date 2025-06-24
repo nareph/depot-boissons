@@ -1,17 +1,114 @@
-// src/ui/main_window.slint
-import { VerticalBox, HorizontalBox, LineEdit, Button, ProgressIndicator } from "std-widgets.slint";
+// src/ui/main_window.slint (Version compatible TRÈS Legacy)
+
+// CORRECTION : On retire `Rectangle` et `Text` de la liste d'imports.
+// Seuls les "vrais" widgets comme Button, ListView, etc., sont dans "std-widgets.slint".
+import { VerticalBox, HorizontalBox, GroupBox, ListView, GridBox, Button } from "std-widgets.slint";
+
+// Les structs ne changent pas
+export struct ProductUI { id: string, name: string, stock: string, price_offers: string, }
+export struct LowStockProductUI { name: string, stock_info: string, }
+export struct UserUI { id: string, name: string, email: string, role: string, }
 
 export component MainWindow inherits Window {
     title: "Tableau de Bord - Dépôt de Boissons";
-    width: 800px;
-    height: 600px;
-    in-out property<string> welcome_message;
+    width: 1024px;
+    height: 768px;
 
-    Text {
-        text: root.welcome_message;
-        font-size: 24px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
+    // Les propriétés et callbacks ne changent pas
+    in-out property <string> welcome_message;
+    in property <bool> is_admin: false;
+    in property <string> today_revenue: "0 XAF";
+    in property <string> today_sales_count: "0";
+    in property <[LowStockProductUI]> low_stock_products_model;
+    in property <[ProductUI]> products_model;
+    in property <[UserUI]> users_model;
+    callback request_dashboard_data();
+    callback request_products();
+    callback request_users();
+    callback add_user_clicked();
+    callback delete_user_clicked(string);
+    callback change_password_clicked();
+    callback logout_clicked();
+
+    property <int> current_view_index: 0;
+
+    init => {
+        root.request_dashboard_data();
+        root.request_products();
+        if (root.is_admin) {
+            root.request_users();
+        }
+    }
+
+    HorizontalLayout {
+        // Barre de navigation latérale
+        VerticalBox {
+            width: 200px;
+            padding: 10px;
+            Rectangle { background: #2c3e50; }
+            
+            Text { text: root.welcome_message; color: #ecf0f1; wrap: word-wrap; }
+            Rectangle { height: 20px; } // Espaceur
+
+            Button { text: "Tableau de Bord"; primary: root.current_view_index == 0; clicked => { root.current_view_index = 0; } }
+            Button { text: "Produits"; primary: root.current_view_index == 1; clicked => { root.current_view_index = 1; } }
+            Button { text: "Ventes"; primary: root.current_view_index == 2; clicked => { root.current_view_index = 2; } }
+            Button { text: "Utilisateurs"; primary: root.current_view_index == 3; visible: root.is_admin; clicked => { root.current_view_index = 3; } }
+            Rectangle { height: 100%; }
+
+            VerticalLayout {
+                spacing: 5px;
+                Text { text: root.welcome_message; color: #ecf0f1; wrap: word-wrap; horizontal-alignment: center; }
+                Button { text: "Changer mot de passe"; clicked => { root.change_password_clicked() } }
+                Button { text: "Déconnexion"; clicked => { root.logout_clicked() } }
+            }
+        }
+
+        // Zone de contenu principal
+        VerticalBox {
+            padding: 20px;
+            
+            if root.current_view_index == 0 : VerticalLayout {
+                spacing: 20px;
+                Text { text: "Aperçu de la journée"; font-size: 24px; font-weight: 700; }
+                GridBox {
+                    HorizontalLayout { GroupBox { title: "Chiffre d'Affaires (Aujourd'hui)"; VerticalLayout { padding: 15px; Text { text: root.today_revenue; font-size: 28px; color: #27ae60; }}}}
+                    HorizontalLayout { GroupBox { title: "Nombre de Ventes (Aujourd'hui)"; VerticalLayout { padding: 15px; Text { text: root.today_sales_count; font-size: 28px; color: #2980b9; }}}}
+                }
+                GroupBox {
+                    title: "Produits à Stock Faible (<= 50 unités)";
+                    ListView { for item in root.low_stock_products_model: HorizontalLayout { padding: 5px; Text { text: item.name; font-weight: 600; } Rectangle { width: 100%; } Text { text: item.stock_info; color: #c0392b; }}}
+                }
+            }
+
+            if root.current_view_index == 1 : GroupBox {
+                title: "Gestion des Produits";
+                VerticalLayout {
+                    HorizontalLayout { Text { text: "Nom du Produit"; font-weight: 700; width: 300px; } Text { text: "Stock (Unités de base)"; font-weight: 700; width: 200px; } Text { text: "Prix de vente"; font-weight: 700; } }
+                    Rectangle { height: 1px; background: #bdc3c7; }
+                    ListView { for product in root.products_model: HorizontalLayout { padding: 5px; Text { text: product.name; width: 300px; } Text { text: product.stock; width: 200px; } Text { text: product.price_offers; }}}
+                }
+            }
+            
+            if root.current_view_index == 2 : Text { text: "Vue Ventes (à implémenter)"; font-size: 24px; }
+            
+            if root.current_view_index == 3 : VerticalLayout {
+                if root.is_admin : VerticalLayout {
+                    spacing: 15px;
+                    HorizontalLayout { Text { text: "Gestion des Utilisateurs"; font-size: 24px; font-weight: 700; } Rectangle { width: 1100%; } Button { text: "Ajouter un Utilisateur"; clicked => { root.add_user_clicked() } } }
+                    HorizontalLayout { padding: 5px; Text { text: "Nom"; font-weight: 700; width: 200px; } Text { text: "Email"; font-weight: 700; width: 300px; } Text { text: "Rôle"; font-weight: 700; width: 100px; } }
+                    Rectangle { height: 1px; background: #bdc3c7; }
+                    ListView { for user in root.users_model: HorizontalLayout {
+                        padding: 5px;
+                        Text { text: user.name; width: 200px; }
+                        Text { text: user.email; width: 300px; }
+                        Text { text: user.role; width: 100px; }
+                        Rectangle { width: 100%; }
+                        Button { text: "Supprimer"; clicked => { root.delete_user_clicked(user.id) }}
+                    }}
+                }
+                if !root.is_admin : Text { text: "Accès non autorisé."; color: red; }
+            }
+        }
     }
 }
-
