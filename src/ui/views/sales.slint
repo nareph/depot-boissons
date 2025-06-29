@@ -1,0 +1,39 @@
+import { VerticalBox } from "std-widgets.slint";
+
+export component SalesView {
+    VerticalBox {
+        spacing: 25px;
+        alignment: center;
+        
+        Text {
+            text: "Module Ventes";
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+        }
+        
+        Rectangle {
+            width: 400px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            
+            VerticalBox {
+                alignment: center;
+                spacing: 15px;
+                
+                Text {
+                    text: "🚧";
+                    font-size: 48px;
+                }
+                
+                Text {
+                    text: "Module en développement";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: white;
+                }
+            }
+        }
+    }
+}

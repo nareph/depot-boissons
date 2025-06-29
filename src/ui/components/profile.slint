@@ -1,0 +1,102 @@
+// src/ui/components/profile.slint (Version Corrigée et Fonctionnelle)
+
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { MenuItem } from "menu_item.slint";
+
+// On hérite d'un Rectangle. C'est notre ANCRE de positionnement.
+// Il sera invisible et aura la taille du bouton visible.
+export component HeaderProfile inherits Rectangle {
+    in property <string> user_name;
+    callback change_password_clicked;
+    callback logout_clicked;
+
+    // Dimensions de l'ancre. Doit rentrer dans le header.
+    width: 200px;
+    height: 50px;
+    background: transparent; // L'ancre est invisible.
+
+    // --- 1. Le contenu visible ET cliquable ---
+    // Ce Rectangle est ce que l'utilisateur voit et sur quoi il clique.
+    button_visuals := Rectangle {
+        width: 100%; // Prend toute la taille de l'ancre
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 25px;
+        
+        // Animation au survol
+        states [ hover when area.has-hover: { background: rgba(255, 255, 255, 0.2); } ]
+        
+        area := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { dropdown.show() }
+        }
+
+        // Le layout du contenu est placé PAR-DESSUS le TouchArea
+        HorizontalBox {
+            padding: 8px;
+            spacing: 10px;
+            alignment: center;
+
+            // Avatar
+            Rectangle {
+                width: 34px;
+                height: 34px;
+                border-radius: 17px;
+                background: @linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%);
+                Text { text: "👤"; font-size: 16px; vertical-alignment: center; horizontal-alignment: center; }
+            }
+            // Nom
+            Text {
+                text: root.user_name;
+                font-size: 14px;
+                font-weight: 500;
+                color: white;
+                overflow: elide;
+            }
+            // Flèche
+            Text {
+                text: "▼";
+                color: white;
+                font-size: 12px;
+                padding-right: 15px;
+            }
+        }
+    }
+    
+    // --- 2. Le menu déroulant en tant que PopupWindow ---
+    // C'est un "frère" du bouton visible, pas un enfant. Il est positionné par rapport à l'ancre.
+    dropdown := PopupWindow {
+        x: 0;
+        y: root.height + 5px; // Se positionne 5px SOUS l'ancre.
+        
+        // L'enfant unique qui a le style visuel
+        Rectangle {
+            width: 200px;
+            background: rgba(30, 40, 50, 0.98);
+            border-radius: 12px;
+            drop-shadow-blur: 15px;
+            drop-shadow-color: rgba(0, 0, 0, 0.2);
+            
+            VerticalLayout {
+                padding: 8px;
+                spacing: 4px;
+                
+                MenuItem {
+                    text: "🔑 Changer mot de passe";
+                    clicked => {
+                        root.change_password_clicked();
+                        dropdown.close();
+                    }
+                }
+                MenuItem {
+                    text: "🚪 Déconnexion";
+                    text_color: #ff6b6b;
+                    clicked => {
+                        root.logout_clicked();
+                        dropdown.close();
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,8 +1,7 @@
 // src/seed.rs
 
 use crate::{
-    // On importe les types d'erreur nécessaires
-    error::{AppError, AppResult},
+    error::AppResult,
     models::{
         NewPackagingUnit, NewProduct, NewProductOffering, NewSale, NewSaleItem, NewUser,
         PackagingUnit, Product, ProductOffering, Sale,
@@ -12,19 +11,17 @@ use bcrypt::{DEFAULT_COST, hash};
 use bigdecimal::BigDecimal;
 use chrono::Utc;
 use diesel::prelude::*;
-use rand::Rng; // Le trait Rng est nécessaire pour .gen_range()
+use rand::Rng;
 use std::str::FromStr;
 use uuid::Uuid;
 
-// La signature de la fonction est mise à jour pour retourner notre type d'erreur personnalisé
 pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
     use crate::schema::{packaging_units, product_offerings, products, sale_items, sales, users};
 
     log::info!("--- Début du seeding de la base de données ---");
 
-    // 1. Nettoyer les tables dans le bon ordre
+    // 1. Nettoyer les tables dans le bon ordre pour respecter les clés étrangères
     log::info!("Nettoyage des tables existantes...");
-    // `?` fonctionne maintenant grâce à notre `impl From<DieselError>`
     diesel::delete(sale_items::table).execute(conn)?;
     diesel::delete(sales::table).execute(conn)?;
     diesel::delete(product_offerings::table).execute(conn)?;
@@ -33,11 +30,9 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
     diesel::delete(users::table).execute(conn)?;
     log::info!("Tables nettoyées.");
 
-    // 2. Créer l'utilisateur admin
+    // 2. Créer l'utilisateur administrateur
     log::info!("Création de l'utilisateur admin...");
-    // CORRECTION: `hash` retourne un Result, on utilise `?`
-    let admin_password = hash("admin123", DEFAULT_COST)
-        .map_err(|e| AppError::Generic(format!("Bcrypt error: {}", e)))?;
+    let admin_password = hash("admin123", DEFAULT_COST)?;
     let admin_user = NewUser {
         id: Uuid::new_v4(),
         email: "admin@depot-boissons.com",
@@ -106,6 +101,13 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
             base_unit_name: "bouteille 33cl",
             total_stock_in_base_units: 120,
         },
+        // On ajoute un produit avec un stock faible pour tester le dashboard
+        NewProduct {
+            id: Uuid::new_v4(),
+            name: "Fanta",
+            base_unit_name: "bouteille 33cl",
+            total_stock_in_base_units: 45,
+        },
     ];
     let inserted_products = diesel::insert_into(products::table)
         .values(&products_data)
@@ -126,6 +128,11 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
         .iter()
         .find(|p| p.name == "Coca-Cola")
         .unwrap();
+    let fanta = inserted_products
+        .iter()
+        .find(|p| p.name == "Fanta")
+        .unwrap();
+
     let bouteille_65cl = inserted_packaging_units
         .iter()
         .find(|u| u.name == "Bouteille 65cl")
@@ -143,38 +150,42 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
         .find(|u| u.name == "Casier (24 Bouteilles)")
         .unwrap();
 
-    // CORRECTION: BigDecimal::from_str peut échouer
     let offerings_data = vec![
         NewProductOffering {
             id: Uuid::new_v4(),
             product_id: beaufort.id,
             packaging_unit_id: bouteille_65cl.id,
-            price: BigDecimal::from_str("700.00").map_err(|e| AppError::Generic(e.to_string()))?,
+            price: BigDecimal::from_str("700.00")?,
         },
         NewProductOffering {
             id: Uuid::new_v4(),
             product_id: beaufort.id,
             packaging_unit_id: casier_12.id,
-            price: BigDecimal::from_str("8000.00").map_err(|e| AppError::Generic(e.to_string()))?,
+            price: BigDecimal::from_str("8000.00")?,
         },
         NewProductOffering {
             id: Uuid::new_v4(),
             product_id: guinness.id,
             packaging_unit_id: bouteille_33cl.id,
-            price: BigDecimal::from_str("650.00").map_err(|e| AppError::Generic(e.to_string()))?,
+            price: BigDecimal::from_str("650.00")?,
         },
         NewProductOffering {
             id: Uuid::new_v4(),
             product_id: guinness.id,
             packaging_unit_id: casier_24.id,
-            price: BigDecimal::from_str("15000.00")
-                .map_err(|e| AppError::Generic(e.to_string()))?,
+            price: BigDecimal::from_str("15000.00")?,
         },
         NewProductOffering {
             id: Uuid::new_v4(),
             product_id: coca.id,
             packaging_unit_id: bouteille_33cl.id,
-            price: BigDecimal::from_str("500.00").map_err(|e| AppError::Generic(e.to_string()))?,
+            price: BigDecimal::from_str("500.00")?,
+        },
+        NewProductOffering {
+            id: Uuid::new_v4(),
+            product_id: fanta.id,
+            packaging_unit_id: bouteille_33cl.id,
+            price: BigDecimal::from_str("500.00")?,
         },
     ];
     let inserted_offerings = diesel::insert_into(product_offerings::table)
@@ -182,9 +193,8 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
         .get_results::<ProductOffering>(conn)?;
     log::info!("Offres créées.");
 
-    // 6. Créer des ventes de test
-    log::info!("Création des ventes de test...");
-    // CORRECTION: `rand::thread_rng()` est la bonne façon d'obtenir un générateur
+    // 6. Créer des ventes de test pour aujourd'hui
+    log::info!("Création des ventes de test pour aujourd'hui...");
     let mut rng = rand::rng();
 
     for i in 1..=5 {
@@ -192,19 +202,17 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
             id: Uuid::new_v4(),
             sale_number: &format!("VTE-{:05}", i),
             total_amount: BigDecimal::from(0),
-            date: Utc::now(),
+            date: Utc::now(), // La vente a lieu "maintenant"
         };
         let sale = diesel::insert_into(sales::table)
             .values(&new_sale)
             .get_result::<Sale>(conn)?;
 
-        // CORRECTION: Utiliser `gen_range` sur le générateur `rng`
         let num_items = rng.random_range(1..=3);
         let mut sale_total = BigDecimal::from(0);
 
         for _ in 0..num_items {
-            let offering_index = rng.random_range(0..inserted_offerings.len());
-            let offering = &inserted_offerings[offering_index];
+            let offering = &inserted_offerings[rng.random_range(0..inserted_offerings.len())];
             let quantity = rng.random_range(1..=4);
 
             let new_sale_item = NewSaleItem {

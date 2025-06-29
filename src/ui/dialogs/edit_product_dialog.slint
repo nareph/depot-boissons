@@ -1,0 +1,87 @@
+// src/ui/dialogs/edit_product_dialog.slint
+import { LineEdit, StandardButton, VerticalBox } from "std-widgets.slint";
+
+export component EditProductDialog inherits Dialog {
+    callback save_clicked(string, string, string, int);
+    
+    in-out property <string> product_id;
+    in-out property <string> product_name;
+    in-out property <string> base_unit_name;
+    in-out property <int> current_stock;
+    in-out property <string> status_message;
+    
+    title: "Modifier le Produit";
+    width: 400px;
+    height: 380px;
+    
+    // UN SEUL élément non-bouton autorisé
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        
+        Text {
+            text: "Modifier le Produit";
+            font-size: 18px;
+            font-weight: 600;
+            horizontal-alignment: center;
+        }
+        
+        // Champ nom du produit
+        Text {
+            text: "Nom du produit:";
+            font-size: 14px;
+        }
+        name_edit := LineEdit {
+            text: root.product_name;
+            height: 35px;
+        }
+        
+        // Champ unité de base
+        Text {
+            text: "Unité de base:";
+            font-size: 14px;
+        }
+        unit_edit := LineEdit {
+            text: root.base_unit_name;
+            height: 35px;
+        }
+        
+        // Champ stock
+        Text {
+            text: "Stock actuel:";
+            font-size: 14px;
+        }
+        stock_edit := LineEdit {
+            text: root.current_stock;
+            input-type: number;
+            height: 35px;
+        }
+        
+        // Message de statut
+        if root.status_message != "" : Text {
+            text: root.status_message;
+            color: red;
+            font-size: 12px;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+    
+    // Boutons StandardButton
+    StandardButton { 
+        kind: cancel; 
+    }
+    
+    StandardButton { 
+        kind: ok; 
+        enabled: name_edit.text != "" && unit_edit.text != "";
+        clicked => {
+            root.save_clicked(
+                root.product_id,
+                name_edit.text,
+                unit_edit.text,
+                stock_edit.text.to-float() 
+            );
+        }
+    }
+}

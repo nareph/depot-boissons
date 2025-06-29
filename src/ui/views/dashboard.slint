@@ -1,0 +1,108 @@
+// src/ui/views/dashboard.slint (Corrigé)
+
+import { VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { ModernCard } from "../components/card.slint";
+import { LowStockProductUI } from "../components/models.slint";
+
+// CORRECTION: Faire hériter le composant d'un VerticalLayout.
+// Cela lui donne un comportement de layout par défaut et résout les problèmes de taille.
+export component DashboardView inherits VerticalLayout {
+    // Les propriétés `in` restent les mêmes.
+    in property <string> today_revenue;
+    in property <string> today_sales_count;
+    in property <[LowStockProductUI]> low_stock_products_model;
+
+    // On configure le layout principal directement ici.
+    spacing: 20px;
+    padding: 20px;
+
+    // 1. Titre
+    Text {
+        text: "Aperçu de la journée";
+        font-size: 28px;
+        font-weight: 700;
+        color: white;
+    }
+
+    // 2. Conteneur des cartes (avec une hauteur fixe)
+    HorizontalBox {
+        spacing: 20px;
+        height: 180px; // Donnons-lui une hauteur fixe et raisonnable
+
+        ModernCard {
+            title: "Chiffre d'Affaires";
+            value: root.today_revenue;
+            accent_color: #27ae60;
+            icon: "💰";
+        }
+        ModernCard {
+            title: "Nombre de Ventes";
+            value: root.today_sales_count;
+            accent_color: #2980b9;
+            icon: "📈";
+        }
+        ModernCard {
+            title: "Stock Faible";
+            value: root.low_stock_products_model.length;
+            accent_color: #e74c3c;
+            icon: "⚠️";
+        }
+    }
+
+    // 3. Section stock faible (qui prendra le reste de l'espace)
+    Rectangle {
+        // Cette section prendra toute la hauteur restante grâce au VerticalLayout parent.
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        // On utilise `clip` pour s'assurer que le contenu ne dépasse pas les coins arrondis.
+        clip: true;
+
+        VerticalBox {
+            padding: 25px;
+            spacing: 15px;
+
+            // En-tête de la section
+            HorizontalBox {
+                spacing: 10px;
+                Text { text: "⚠️"; font-size: 24px; }
+                Text {
+                    text: "Produits à Stock Faible";
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: white;
+                }
+            }
+
+            // La ScrollView prendra tout l'espace restant dans ce conteneur.
+            ScrollView {
+                // Pas besoin de spécifier width/height, le layout s'en charge.
+                VerticalBox {
+                    spacing: 8px;
+
+                    for item in root.low_stock_products_model: Rectangle {
+                        height: 50px;
+                        background: rgba(255, 255, 255, 0.05);
+                        border-radius: 8px;
+                        
+                        HorizontalBox {
+                            padding: 15px;
+                            alignment:space-between;
+                            // Pour l'espacement, on utilise un Rectangle flexible.
+                            Text {
+                                text: item.name;
+                                font-weight: 600;
+                                color: white;
+                            }
+                            //Rectangle { width: 100%; } // Espaceur legacy
+                            Text {
+                                text: item.stock_info;
+                                color: #ff6b6b;
+                                font-weight: 600;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

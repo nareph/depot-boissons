@@ -1,31 +1,56 @@
+// src/error.rs
+
+use bcrypt::BcryptError;
+use bigdecimal::ParseBigDecimalError;
+use diesel::ConnectionError;
 use diesel::result::Error as DieselError;
+use slint::PlatformError;
+use std::error::Error as StdError;
 use std::fmt;
 
+/// Type alias pour simplifier l'écriture des types de retour.
+pub type AppResult<T> = Result<T, AppError>;
+
+/// L'énumération principale pour toutes les erreurs possibles dans notre application.
 #[derive(Debug)]
 pub enum AppError {
-    Database(Box<dyn std::error::Error + Send + Sync>),
-    Platform(slint::PlatformError),
+    /// Erreur provenant de la base de données (Diesel).
+    /// On utilise `Box<dyn StdError ...>` pour pouvoir y stocker `DieselError` et `ConnectionError`.
+    Database(Box<dyn StdError + Send + Sync>),
+
+    /// Erreur provenant de l'interface graphique (Slint).
+    Platform(PlatformError),
+
+    /// Erreur spécifique au processus de "seeding" (remplissage) de la base de données.
     Seeding(String),
+
+    /// Erreur spécifique au processus d'authentification (ex: mauvais mot de passe).
     Authentication(String),
+
+    /// Erreur standard d'entrée/sortie.
     Io(std::io::Error),
+
+    /// Erreur générique pour les messages d'erreur personnalisés créés dans notre code.
     Generic(String),
 }
 
+/// Implémentation pour afficher l'erreur de manière lisible.
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AppError::Database(err) => write!(f, "Database error: {}", err),
-            AppError::Platform(err) => write!(f, "Platform error: {}", err),
-            AppError::Seeding(msg) => write!(f, "Seeding error: {}", msg),
-            AppError::Authentication(msg) => write!(f, "Authentication error: {}", msg),
-            AppError::Io(err) => write!(f, "IO error: {}", err),
-            AppError::Generic(msg) => write!(f, "Error: {}", msg),
+            AppError::Database(err) => write!(f, "Erreur de base de données : {}", err),
+            AppError::Platform(err) => write!(f, "Erreur de la plateforme UI : {}", err),
+            AppError::Seeding(msg) => write!(f, "Erreur de seeding : {}", msg),
+            AppError::Authentication(msg) => write!(f, "Erreur d'authentification : {}", msg),
+            AppError::Io(err) => write!(f, "Erreur d'entrée/sortie : {}", err),
+            AppError::Generic(msg) => write!(f, "Erreur : {}", msg),
         }
     }
 }
 
-impl std::error::Error for AppError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+/// Implémentation du trait Error pour une meilleure interopérabilité.
+impl StdError for AppError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
             AppError::Database(err) => Some(err.as_ref()),
             AppError::Platform(err) => Some(err),
@@ -35,15 +60,39 @@ impl std::error::Error for AppError {
     }
 }
 
-// Convert from different error types
-impl From<Box<dyn std::error::Error + Send + Sync>> for AppError {
-    fn from(err: Box<dyn std::error::Error + Send + Sync>) -> Self {
-        AppError::Database(err)
+// --- Blocs de conversion `From` pour l'opérateur `?` ---
+
+// Convertit les erreurs de requête Diesel en AppError::Database.
+impl From<DieselError> for AppError {
+    fn from(err: DieselError) -> Self {
+        AppError::Database(Box::new(err))
     }
 }
 
-impl From<slint::PlatformError> for AppError {
-    fn from(err: slint::PlatformError) -> Self {
+// Convertit les erreurs de connexion Diesel en AppError::Database.
+impl From<ConnectionError> for AppError {
+    fn from(err: ConnectionError) -> Self {
+        AppError::Database(Box::new(err))
+    }
+}
+
+// Convertit les erreurs de Bcrypt en AppError::Generic (ou une nouvelle variante si vous préférez).
+impl From<BcryptError> for AppError {
+    fn from(err: BcryptError) -> Self {
+        AppError::Generic(format!("Erreur de hachage : {}", err))
+    }
+}
+
+// Convertit les erreurs de BigDecimal en AppError::Generic.
+impl From<ParseBigDecimalError> for AppError {
+    fn from(err: ParseBigDecimalError) -> Self {
+        AppError::Generic(format!("Erreur de parsing de nombre : {}", err))
+    }
+}
+
+// Les autres conversions que vous aviez déjà.
+impl From<PlatformError> for AppError {
+    fn from(err: PlatformError) -> Self {
         AppError::Platform(err)
     }
 }
@@ -66,13 +115,18 @@ impl From<&str> for AppError {
     }
 }
 
-impl From<DieselError> for AppError {
-    fn from(err: DieselError) -> Self {
-        // On encapsule l'erreur Diesel dans notre variante AppError::Database
-        // C'est le comportement le plus logique pour une erreur venant de cette crate.
-        AppError::Database(Box::new(err))
+// Ajout pour la compatibilité avec env::var
+impl From<std::env::VarError> for AppError {
+    fn from(err: std::env::VarError) -> Self {
+        AppError::Generic(format!(
+            "Variable d'environnement manquante ou invalide : {}",
+            err
+        ))
     }
 }
 
-// Helper type alias for Results
-pub type AppResult<T> = Result<T, AppError>;
+impl From<Box<dyn StdError + Send + Sync>> for AppError {
+    fn from(err: Box<dyn StdError + Send + Sync>) -> Self {
+        AppError::Database(err)
+    }
+}

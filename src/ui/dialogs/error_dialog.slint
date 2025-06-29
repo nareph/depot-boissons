@@ -1,0 +1,90 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component ErrorDialog inherits Dialog {
+    in-out property <string> dialog_title: "Erreur";
+    in-out property <string> message: "";
+    
+    callback ok_clicked();
+    
+    title: root.dialog_title;
+    width: 450px;
+    height: 280px;
+    
+    VerticalBox {
+        padding: 30px;
+        spacing: 25px;
+        alignment: start;
+        
+        // En-tête avec icône et titre
+        HorizontalBox {
+            alignment: start;
+            spacing: 15px;
+            height: 40px;
+            
+            // Icône d'erreur
+            Rectangle {
+                width: 40px;
+                height: 40px;
+                background: #f44336;
+                border-radius: 20px;
+                
+                Text {
+                    text: "❌";
+                    font-size: 18px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+            
+            // Titre
+            Text {
+                text: root.dialog_title;
+                font-size: 18px;
+                font-weight: 600;
+                color: #d32f2f;
+                vertical-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+        
+        // Message principal
+        Rectangle {
+            background: #ffebee;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: #ffcdd2;
+            vertical-stretch: 1;
+            
+            VerticalBox {
+                padding: 20px;
+                
+                Text {
+                    text: root.message;
+                    font-size: 14px;
+                    color: #c62828;
+                    wrap: word-wrap;
+                    horizontal-alignment: left;
+                    vertical-alignment: top;
+                }
+            }
+        }
+        
+        // Boutons avec hauteur fixe
+        HorizontalBox {
+            alignment: end;
+            spacing: 10px;
+            height: 45px;
+            
+            Button {
+                text: "OK";
+                primary: true;
+                min-width: 100px;
+                height: 35px;
+                
+                clicked => {
+                    root.ok_clicked();
+                }
+            }
+        }
+    }
+}

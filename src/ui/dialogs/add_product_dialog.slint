@@ -1,0 +1,82 @@
+// src/ui/dialogs/add_product_dialog.slint
+import { LineEdit, StandardButton, VerticalBox } from "std-widgets.slint";
+
+export component AddProductDialog inherits Dialog {
+    callback save_clicked(string, string, int);
+    
+    in-out property <string> status_message;
+    
+    title: "Ajouter un Produit";
+    width: 400px;
+    height: 350px;
+    
+    // UN SEUL élément non-bouton autorisé
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        
+        Text {
+            text: "Nouveau Produit";
+            font-size: 18px;
+            font-weight: 600;
+            horizontal-alignment: center;
+        }
+        
+        // Champ nom du produit
+        Text {
+            text: "Nom du produit:";
+            font-size: 14px;
+        }
+        name_edit := LineEdit {
+            placeholder-text: "Entrez le nom du produit";
+            height: 35px;
+        }
+        
+        // Champ unité de base
+        Text {
+            text: "Unité de base:";
+            font-size: 14px;
+        }
+        unit_edit := LineEdit {
+            placeholder-text: "Ex: kg, litre, pièce";
+            height: 35px;
+        }
+        
+        // Champ stock initial
+        Text {
+            text: "Stock initial:";
+            font-size: 14px;
+        }
+        stock_edit := LineEdit {
+            placeholder-text: "Quantité initiale";
+            input-type: number;
+            height: 35px;
+        }
+        
+        // Message de statut
+        if root.status_message != "" : Text {
+            text: root.status_message;
+            color: red;
+            font-size: 12px;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+    
+    // Boutons StandardButton
+    StandardButton { 
+        kind: cancel; 
+    }
+    
+    StandardButton { 
+        kind: ok; 
+        enabled: name_edit.text != "" && unit_edit.text != "" && stock_edit.text != "";
+        clicked => {
+            root.save_clicked(
+                name_edit.text,
+                unit_edit.text,
+                stock_edit.text.to-float()
+            );
+        }
+    }
+}

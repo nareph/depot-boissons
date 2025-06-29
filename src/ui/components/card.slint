@@ -1,0 +1,74 @@
+// src/ui/components/card.slint (Corrigé)
+
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component ModernCard inherits Rectangle { // On peut le faire hériter d'un Rectangle
+    in property <string> title;
+    in property <string> value;
+    in property <color> accent_color;
+    in property <string> icon;
+    
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    drop-shadow-blur: 10px;
+    drop-shadow-color: rgba(0, 0, 0, 0.1);
+    
+    animate background { duration: 200ms; easing: ease-in-out; }
+    animate drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
+    
+    states [
+        hover when ta.has-hover: {
+            background: rgba(255, 255, 255, 0.25);
+            drop-shadow-blur: 15px;
+        }
+    ]
+    
+    ta := TouchArea {
+        mouse-cursor: pointer;
+    }
+    
+    VerticalBox {
+        // On utilise des valeurs fixes
+        padding: 25px;
+        spacing: 15px;
+        
+        HorizontalBox {
+            alignment: space-between;
+            
+            Text {
+                text: root.icon;
+                font-size: 28px; // Taille fixe
+            }
+            
+            Rectangle {
+                width: 4px;
+                height: 30px; // Taille fixe
+                background: root.accent_color;
+                border-radius: 2px;
+                animate background { duration: 300ms; }
+            }
+        }
+        
+        VerticalBox {
+            spacing: 8px; // Espacement fixe
+            
+            Text {
+                text: root.title;
+                font-size: 14px; // Taille fixe
+                font-weight: 500;
+                color: rgba(255, 255, 255, 0.8);
+                horizontal-alignment: left;
+                overflow: elide;
+            }
+            
+            Text {
+                text: root.value;
+                font-size: 24px; // Taille fixe
+                font-weight: 700;
+                color: white;
+                horizontal-alignment: left;
+                overflow: elide;
+            }
+        }
+    }
+}

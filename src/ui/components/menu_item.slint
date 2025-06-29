@@ -1,0 +1,32 @@
+// src/ui/components/menu_item.slint
+
+import { HorizontalBox } from "std-widgets.slint";
+
+export component MenuItem inherits Rectangle {
+    in property <string> text;
+    in property <color> text_color: white;
+    callback clicked;
+
+    height: 40px;
+    
+    // On met un fond transparent par défaut
+    // et on le change uniquement au survol
+    background: area.has-hover ? rgba(255, 255, 255, 0.1) : transparent;
+    animate background { duration: 200ms; }
+
+    area := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked() }
+    }
+    
+    HorizontalBox {
+        padding-left: 12px;
+        spacing: 8px;
+        
+        Text {
+            text: root.text;
+            font-size: 13px;
+            color: root.text_color;
+        }
+    }
+}

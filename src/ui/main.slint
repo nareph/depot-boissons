@@ -1,0 +1,107 @@
+// src/ui/main.slint (Corrigé)
+
+import { HorizontalBox, VerticalBox } from "std-widgets.slint";
+import { AppHeader } from "./components/header.slint";
+import { AppSidebar } from "./components/sidebar.slint";
+import { DashboardView } from "./views/dashboard.slint";
+import { ProductsView } from "./views/products.slint";
+import { SalesView } from "./views/sales.slint";
+import { UsersView } from "./views/users.slint";
+import { LowStockProductUI, ProductUI, UserUI } from "./components/models.slint";
+
+export component MainWindow inherits Window {
+    title: "Tableau de Bord - Dépôt de Boissons";
+    
+    min-width: 800px;
+    min-height: 600px;
+    preferred-width: 1200px;
+    preferred-height: 800px;
+    
+    // Propriétés communes
+    in-out property <string> welcome_message;
+    in property <bool> is_admin;
+    in property <string> today_revenue;
+    in property <string> today_sales_count;
+    in property <[LowStockProductUI]> low_stock_products_model;
+    in property <[ProductUI]> products_model;
+    in property <[UserUI]> users_model;
+    
+    // Callbacks
+    callback request_dashboard_data();
+    callback request_products();
+    callback request_users();
+    callback add_user_clicked();
+    callback delete_user_clicked(string);
+    callback change_password_clicked();
+    callback logout_clicked();
+    callback add_product_clicked();
+    callback edit_product_clicked(int);
+    callback delete_product_clicked(int);
+
+    property <int> current_view_index: 0;
+    
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: @linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+        
+        VerticalBox {
+            spacing: 2px;
+            padding: 0px;
+            
+            AppHeader {
+                // On peut fixer la hauteur ou la rendre un peu adaptative si on veut
+                height: 60px;
+                welcome_message: root.welcome_message;
+                change_password_clicked => { root.change_password_clicked(); }
+                logout_clicked => { root.logout_clicked(); }
+            }
+
+            HorizontalBox {
+                spacing: 0px;
+                padding: 0px;
+                
+                AppSidebar {
+                    current_view_index: root.current_view_index;
+                    is_admin: root.is_admin;
+                    view-changed(index) => { root.current_view_index = index; }
+                }
+                // Zone de contenu principal qui s'étire automatiquement
+                Rectangle {
+                    background: transparent;
+                    // Cette zone prend automatiquement tout l'espace restant
+                    
+                    if root.current_view_index == 0: DashboardView {
+                        width: 100%;
+                        height: 100%;
+                        today_revenue: root.today_revenue;
+                        today_sales_count: root.today_sales_count;
+                        low_stock_products_model: root.low_stock_products_model;
+                    }
+                    if root.current_view_index == 1: ProductsView {
+                        width: 100%;
+                        height: 100%;
+                        products_model: root.products_model;
+                        is_admin: root.is_admin;  // AJOUT DE CETTE LIGNE
+                        request_products => { root.request_products(); }
+                        add_product_clicked => { root.add_product_clicked() }
+                        edit_product_clicked(index) => { root.edit_product_clicked(index) }
+                        delete_product_clicked(index) => { root.delete_product_clicked(index) }
+                    }
+                    if root.current_view_index == 2: SalesView {
+                        width: 100%;
+                        height: 100%;
+                    }
+                    if root.current_view_index == 3: UsersView {
+                        width: 100%;
+                        height: 100%;
+                        is_admin: root.is_admin;
+                        users_model: root.users_model;
+                        add_user_clicked => { root.add_user_clicked(); }
+                        delete_user_clicked(user_id) => { root.delete_user_clicked(user_id); }
+                    }
+                }
+            }
+        }
+    }
+}

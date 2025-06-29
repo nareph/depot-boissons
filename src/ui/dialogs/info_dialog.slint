@@ -1,0 +1,89 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component InfoDialog inherits Dialog {
+    in-out property <string> dialog_title: "Information";
+    in-out property <string> message: "";
+    
+    callback ok_clicked();
+    
+    title: root.dialog_title;
+    width: 450px;
+    height: 280px;
+    
+    VerticalBox {
+        padding: 20px;
+        spacing: 20px;
+        alignment: start;
+        
+        // En-tête avec icône et titre
+        HorizontalBox {
+            alignment: start;
+            spacing: 15px;
+            height: 50px;
+            
+            // Icône d'information
+            Rectangle {
+                width: 40px;
+                height: 40px;
+                background: #2196F3;
+                border-radius: 20px;
+                
+                Text {
+                    text: "ℹ️";
+                    font-size: 20px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+            
+            // Titre
+            Text {
+                text: root.dialog_title;
+                font-size: 18px;
+                font-weight: 600;
+                color: #333333;
+                vertical-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+        
+        Rectangle {
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: #e9ecef;
+            vertical-stretch: 1;
+            
+            VerticalBox {
+                padding: 15px;
+                
+                Text {
+                    text: root.message;
+                    font-size: 14px;
+                    color: #495057;
+                    wrap: word-wrap;
+                    horizontal-alignment: left;
+                    vertical-alignment: top;
+                }
+            }
+        }
+        
+        // Zone de boutons avec hauteur fixe
+        HorizontalBox {
+            alignment: end;
+            spacing: 10px;
+            height: 45px;
+            
+            Button {
+                text: "OK";
+                primary: true;
+                min-width: 100px;
+                height: 35px;
+                
+                clicked => {
+                    root.ok_clicked();
+                }
+            }
+        }
+    }
+}

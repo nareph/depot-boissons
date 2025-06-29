@@ -1,0 +1,229 @@
+// src/ui/views/products_view.slint (version corrigée - alignement)
+import { StandardTableView, ScrollView, Button } from "std-widgets.slint";
+import { ProductUI } from "../components/models.slint";
+
+export component ProductsView inherits VerticalLayout {
+    in property <[ProductUI]> products_model;
+    in property <bool> is_admin;
+    callback request_products();
+    callback add_product_clicked();
+    callback edit_product_clicked(int);
+    callback delete_product_clicked(int);
+
+    padding: 25px;
+    spacing: 15px;
+
+    // En-tête de la vue
+    HorizontalLayout {
+        spacing: 15px;
+        alignment: stretch;
+        
+        Text { 
+            text: "Gestion des Produits"; 
+            font-size: 28px; 
+            font-weight: 700; 
+            color: white;
+            vertical-alignment: center;
+        }
+        
+        Rectangle { 
+            // Spacer pour pousser les boutons à droite
+        }
+        
+        // Actions réservées aux administrateurs
+        if root.is_admin : HorizontalLayout {
+            spacing: 10px;
+            alignment: end;
+            
+            Button { 
+                text: "➕ Ajouter";
+                height: 40px; 
+                min-width: 120px;
+                primary: true;
+                clicked => { root.add_product_clicked(); } 
+            }
+        }
+        
+        Button { 
+            text: "🔄 Rafraîchir";
+            height: 40px; 
+            min-width: 120px; 
+            clicked => { root.request_products(); } 
+        }
+    }
+
+    // Message si pas de données
+    if root.products_model.length == 0 : Rectangle {
+        height: 200px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        
+        Text {
+            text: "Aucun produit trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Tableau des produits - CORRECTION: layout responsive
+    if root.products_model.length > 0 : Rectangle {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        clip: true;
+
+        ScrollView {
+            viewport-width: self.visible-width;
+            
+            VerticalLayout {
+                padding: 20px;
+                spacing: 2px;
+                width: 100%;
+
+                // En-tête du tableau responsive
+                Rectangle {
+                    height: 45px;
+                    background: rgba(255, 255, 255, 0.15);
+                    border-radius: 8px;
+                    width: 100%;
+                    
+                    HorizontalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        spacing: 10px;
+                        
+                        // CORRECTION: Utilisation de horizontal-stretch avec min-width
+                        Rectangle {
+                            horizontal-stretch: 4; // Plus d'espace pour le nom
+                            min-width: 200px;
+                            Text { 
+                                text: "Nom du Produit"; 
+                                font-weight: 600; 
+                                color: white; 
+                                vertical-alignment: center;
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 4;
+                            min-width: 200px;
+                            Text { 
+                                text: "Stock"; 
+                                font-weight: 600; 
+                                color: white; 
+                                horizontal-alignment: center; 
+                                vertical-alignment: center;
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 4;
+                            min-width: 200px;
+                            Text { 
+                                text: "Prix"; 
+                                font-weight: 600; 
+                                color: white; 
+                                horizontal-alignment: center; 
+                                vertical-alignment: center;
+                            }
+                        }
+                        if root.is_admin : Rectangle {
+                            horizontal-stretch: 1.5;
+                            min-width: 100px;
+                            Text { 
+                                text: "Actions"; 
+                                font-weight: 600; 
+                                color: white; 
+                                horizontal-alignment: center; 
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Lignes de données responsive
+                for product[index] in root.products_model : Rectangle {
+                    height: 55px;
+                    background: mod(index, 2) == 0 ? rgba(255, 255, 255, 0.08) : rgba(255, 255, 255, 0.03);
+                    border-radius: 8px;
+                    width: 100%;
+                    
+                    // Effet hover
+                    touch-area := TouchArea {
+                        Rectangle {
+                            background: touch-area.has-hover ? rgba(255, 255, 255, 0.15) : transparent;
+                            border-radius: 8px;
+                        }
+                    }
+                    
+                    HorizontalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        spacing: 10px;
+                        
+                        // CORRECTION: Proportions identiques à l'en-tête
+                        Rectangle {
+                            horizontal-stretch: 4;
+                            min-width: 200px;
+                            Text { 
+                                text: product.name; 
+                                color: white; 
+                                vertical-alignment: center;
+                                wrap: word-wrap;
+                                overflow: elide;
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 4;
+                            min-width: 200px;
+                            Text { 
+                                text: product.stock; 
+                                color: #81C784;
+                                horizontal-alignment: center; 
+                                vertical-alignment: center;
+                                font-weight: 600; 
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 4;
+                            min-width: 200px;
+                            Text { 
+                                text: product.price_offers; 
+                                color: #FFD54F;
+                                horizontal-alignment: center; 
+                                vertical-alignment: center;
+                                font-weight: 600; 
+                                wrap: word-wrap;
+                                overflow: elide;
+                            }
+                        }
+                        
+                        // Actions responsive
+                        if root.is_admin : Rectangle {
+                            horizontal-stretch: 1.5;
+                            min-width: 100px;
+                            
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: center;
+                                
+                                Button {
+                                    text: "✏️";
+                                    width: 40px;
+                                    height: 32px;
+                                    clicked => { root.edit_product_clicked(index); }
+                                }
+
+                                Button {
+                                    text: "🗑️";
+                                    width: 40px;
+                                    height: 32px;
+                                    clicked => { root.delete_product_clicked(index); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

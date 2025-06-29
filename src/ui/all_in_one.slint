@@ -1,10 +1,31 @@
-// D'abord, on importe les composants des autres fichiers
+// src/ui/all_in_one.slint (Version Complète)
+
+// Importer les fenêtres principales et les dialogues
 import { LoginWindow } from "login.slint";
 import { ChangePasswordWindow } from "change_password.slint";
-import { MainWindow } from "main_window.slint";
-import {AddUserWindow} from "add_user.slint";
-import { ChangePasswordUserWindow } from "change_password_user.slint";
+import { MainWindow } from "main.slint";
+import { AddUserWindow } from "add_user.slint";
+import { ChangePasswordUserWindow } from "change_password_user.slint"; 
 
+// Importer les nouveaux dialogues de produits
+import { AddProductDialog } from "./dialogs/add_product_dialog.slint";
+import { EditProductDialog } from "./dialogs/edit_product_dialog.slint";
+import { DeleteProductDialog } from "./dialogs/delete_product_dialog.slint";
+import { ErrorDialog } from "./dialogs/error_dialog.slint";
+import { InfoDialog } from "./dialogs/info_dialog.slint";
 
-// Ensuite, on les ré-exporte pour que Rust puisse les voir
-export { LoginWindow, ChangePasswordWindow, AddUserWindow, ChangePasswordUserWindow, MainWindow }
+// Ré-exporter TOUT ce que Rust a besoin de `::new()`
+export { 
+    LoginWindow, 
+    ChangePasswordWindow, 
+    MainWindow, 
+    AddUserWindow,
+    ChangePasswordUserWindow,
+
+    // Exporter les nouveaux dialogues
+    AddProductDialog,
+    EditProductDialog,
+    DeleteProductDialog,
+    ErrorDialog,
+    InfoDialog
+}

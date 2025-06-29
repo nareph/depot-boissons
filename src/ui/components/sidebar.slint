@@ -1,0 +1,37 @@
+// src/ui/components/sidebar.slint (Corrigé)
+
+import { VerticalBox } from "std-widgets.slint";
+import { ModernButton } from "./button.slint";
+
+export component AppSidebar inherits Rectangle {
+    in property <int> current_view_index;
+    in property <bool> is_admin;
+    callback view-changed(int);
+
+    // --- CORRECTION : On définit une largeur fixe ici ---
+    // Cette valeur est maintenant indépendante de la fenêtre parente, ce qui casse la boucle.
+    width: 250px; 
+
+    background: rgba(255, 255, 255, 0.08);
+    
+    VerticalBox {
+        padding: 25px;
+        spacing: 15px;
+        
+        Text {
+            text: "NAVIGATION";
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        VerticalBox {
+            spacing: 8px;
+            
+            ModernButton { text: "Tableau de Bord"; icon: "📊"; is_active: root.current_view_index == 0; clicked => { root.view-changed(0); } }
+            ModernButton { text: "Produits"; icon: "📦"; is_active: root.current_view_index == 1; clicked => { root.view-changed(1); } }
+            ModernButton { text: "Ventes"; icon: "💰"; is_active: root.current_view_index == 2; clicked => { root.view-changed(2); } }
+            if root.is_admin: ModernButton { text: "Utilisateurs"; icon: "👥"; is_active: root.current_view_index == 3; clicked => { root.view-changed(3); } }
+        }
+    }
+}

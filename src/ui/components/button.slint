@@ -1,0 +1,54 @@
+// src/ui/components/button.slint
+
+import { HorizontalBox } from "std-widgets.slint";
+
+export component ModernButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> is_active: false;
+    in property <string> icon: "";  
+    in property <string> kind: "normal";
+    in property <bool> enabled: true;
+
+    callback clicked;
+
+    height: 50px;
+    min-width: 200px;
+    
+    opacity: root.enabled ? 1.0 : 0.5;
+    
+    property <brush> normal_bg: area.has-hover ? rgba(255, 255, 255, 0.2) : rgba(255, 255, 255, 0.1);
+    property <brush> active_bg: @linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    property <brush> danger_bg: area.has-hover ? #e74c3c : #c0392b;
+    background: root.is_active ? root.active_bg : (root.kind == "danger" ? root.danger_bg : root.normal_bg);
+    
+    border-radius: 12px;
+    animate background { duration: 250ms; easing: ease-in-out; }
+    animate opacity { duration: 250ms; easing: ease-in-out; }
+
+    area := TouchArea {
+        mouse-cursor: pointer;
+        enabled: root.enabled;
+        clicked => { root.clicked() }
+    }
+    
+    HorizontalLayout {
+        padding: 15px;
+        spacing: 12px;
+        alignment: center;
+        
+        // if root.icon != "" : Text {
+        //     text: root.icon;
+        //     font-size: 18px;
+        //     color: white;
+        //     vertical-alignment: center;
+        // }
+        
+        Text { 
+            text: root.text; 
+            font-size: 14px; 
+            font-weight: 500; 
+            color: white; 
+            vertical-alignment: center;
+        }
+    }
+}

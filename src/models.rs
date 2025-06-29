@@ -24,6 +24,7 @@ pub struct Product {
 
 #[derive(Insertable, Serialize, Deserialize, Debug)]
 #[diesel(table_name = products)]
+
 pub struct NewProduct<'a> {
     pub id: Uuid,
     pub name: &'a str,
