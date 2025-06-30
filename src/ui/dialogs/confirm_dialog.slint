@@ -1,0 +1,42 @@
+// src/ui/dialogs/confirm_dialog.slint
+
+import { StandardButton, VerticalBox } from "std-widgets.slint";
+
+export component ConfirmDialog inherits Dialog {
+    in property <string> dialog_title: "Confirmation";
+    in property <string> message: "Êtes-vous sûr ?";
+    
+    callback confirmed();
+    callback cancelled();
+
+    title: root.dialog_title;
+    width: 400px;
+    
+    VerticalBox {
+        padding: 20px;
+        spacing: 20px;
+        
+        Text {
+            text: "⚠️";
+            font-size: 32px;
+            horizontal-alignment: center;
+        }
+        
+        Text {
+            text: root.message;
+            font-size: 14px;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+    
+    StandardButton { 
+        kind: cancel;   
+        clicked => { root.cancelled(); }
+} 
+    
+    StandardButton { 
+        kind: ok; 
+        clicked => { root.confirmed(); }
+    } 
+}

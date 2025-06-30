@@ -145,7 +145,6 @@ pub struct NewSaleItem {
 #[diesel(table_name = users)]
 pub struct User {
     pub id: Uuid,
-    pub email: String,
     pub password: String,
     pub name: String,
     pub role: String,
@@ -158,7 +157,6 @@ pub struct User {
 #[diesel(table_name = users)]
 pub struct NewUser<'a> {
     pub id: Uuid,
-    pub email: &'a str,
     pub password: &'a str,
     pub name: &'a str,
     pub role: &'a str,

@@ -12,9 +12,8 @@ $$ LANGUAGE plpgsql;
 -- Table des utilisateurs
 CREATE TABLE users (
     id UUID PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL UNIQUE,
     role TEXT NOT NULL,
     must_change_password BOOLEAN NOT NULL DEFAULT FALSE, 
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

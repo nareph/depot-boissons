@@ -1,18 +1,14 @@
-// src/ui/views/dashboard.slint (Corrigé)
+// src/ui/views/dashboard.slint
 
 import { VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 import { ModernCard } from "../components/card.slint";
 import { LowStockProductUI } from "../components/models.slint";
 
-// CORRECTION: Faire hériter le composant d'un VerticalLayout.
-// Cela lui donne un comportement de layout par défaut et résout les problèmes de taille.
 export component DashboardView inherits VerticalLayout {
-    // Les propriétés `in` restent les mêmes.
     in property <string> today_revenue;
     in property <string> today_sales_count;
     in property <[LowStockProductUI]> low_stock_products_model;
 
-    // On configure le layout principal directement ici.
     spacing: 20px;
     padding: 20px;
 
@@ -24,7 +20,7 @@ export component DashboardView inherits VerticalLayout {
         color: white;
     }
 
-    // 2. Conteneur des cartes (avec une hauteur fixe)
+    // 2. Conteneur des cartes
     HorizontalBox {
         spacing: 20px;
         height: 180px; // Donnons-lui une hauteur fixe et raisonnable
@@ -49,9 +45,8 @@ export component DashboardView inherits VerticalLayout {
         }
     }
 
-    // 3. Section stock faible (qui prendra le reste de l'espace)
+    // 3. Section stock faible 
     Rectangle {
-        // Cette section prendra toute la hauteur restante grâce au VerticalLayout parent.
         background: rgba(255, 255, 255, 0.1);
         border-radius: 16px;
         // On utilise `clip` pour s'assurer que le contenu ne dépasse pas les coins arrondis.
@@ -75,7 +70,6 @@ export component DashboardView inherits VerticalLayout {
 
             // La ScrollView prendra tout l'espace restant dans ce conteneur.
             ScrollView {
-                // Pas besoin de spécifier width/height, le layout s'en charge.
                 VerticalBox {
                     spacing: 8px;
 
@@ -93,7 +87,6 @@ export component DashboardView inherits VerticalLayout {
                                 font-weight: 600;
                                 color: white;
                             }
-                            //Rectangle { width: 100%; } // Espaceur legacy
                             Text {
                                 text: item.stock_info;
                                 color: #ff6b6b;

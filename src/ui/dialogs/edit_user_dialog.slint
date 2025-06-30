@@ -1,0 +1,66 @@
+// src/ui/dialogs/edit_user_dialog.slint
+
+import { LineEdit, StandardButton, VerticalBox, ComboBox } from "std-widgets.slint";
+
+export component EditUserDialog inherits Dialog {
+    callback save_clicked(string, string, string); // id, nouveau nom, nouveau rôle
+    callback cancelled();
+
+    in property <string> user_id;
+    in-out property <string> username;
+    in-out property <int> selected_role_index: 0;
+    in property <[string]> roles: ["User", "Admin"]; // Modèle pour les rôles
+    in-out property <string> status_message;
+    
+    title: "Modifier l'Utilisateur";
+    height: 320px;
+    
+    
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        
+        Text {
+            text: "Modifier l'Utilisateur";
+            font-size: 18px;
+            font-weight: 600;
+            horizontal-alignment: center;
+        }
+        
+        // Champ Nom d'utilisateur
+        Text { text: "Nom d'utilisateur:"; }
+        username_edit := LineEdit {
+            text: root.username;
+            height: 35px;
+        }        
+
+        Text { text: "Rôle:"; }
+        role_combo := ComboBox {
+            model: root.roles;
+            current-index <=> root.selected_role_index;
+            height: 35px;
+        }
+        
+        // Message de statut
+        if root.status_message != "" : Text {
+            text: root.status_message;
+            color: red;
+            font-size: 12px;
+            horizontal-alignment: center;
+        }
+    }
+    
+    StandardButton { kind: cancel; clicked => { root.cancelled(); }}
+    
+    StandardButton { 
+        kind: ok; 
+        enabled: username_edit.text != "";
+        clicked => {
+            root.save_clicked(
+                root.user_id,
+                username_edit.text,
+                root.roles[root.selected_role_index]
+            );
+        }
+    }
+}

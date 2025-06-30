@@ -4,28 +4,34 @@
 import { LoginWindow } from "login.slint";
 import { ChangePasswordWindow } from "change_password.slint";
 import { MainWindow } from "main.slint";
-import { AddUserWindow } from "add_user.slint";
 import { ChangePasswordUserWindow } from "change_password_user.slint"; 
 
 // Importer les nouveaux dialogues de produits
 import { AddProductDialog } from "./dialogs/add_product_dialog.slint";
 import { EditProductDialog } from "./dialogs/edit_product_dialog.slint";
 import { DeleteProductDialog } from "./dialogs/delete_product_dialog.slint";
+import { AddUserDialog } from "./dialogs/add_user_dialog.slint";
+import { EditUserDialog } from "./dialogs/edit_user_dialog.slint";
+import { DeleteUserDialog } from "./dialogs/delete_user_dialog.slint";
 import { ErrorDialog } from "./dialogs/error_dialog.slint";
 import { InfoDialog } from "./dialogs/info_dialog.slint";
+import { ConfirmDialog } from "./dialogs/confirm_dialog.slint";
 
 // Ré-exporter TOUT ce que Rust a besoin de `::new()`
 export { 
     LoginWindow, 
     ChangePasswordWindow, 
     MainWindow, 
-    AddUserWindow,
     ChangePasswordUserWindow,
 
     // Exporter les nouveaux dialogues
     AddProductDialog,
     EditProductDialog,
     DeleteProductDialog,
+    AddUserDialog,
+    EditUserDialog,
+    DeleteUserDialog,
     ErrorDialog,
-    InfoDialog
+    InfoDialog,
+    ConfirmDialog
 }

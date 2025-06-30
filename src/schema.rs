@@ -59,7 +59,6 @@ diesel::table! {
 diesel::table! {
     users (id) {
         id -> Uuid,
-        email -> Text,
         password -> Text,
         name -> Text,
         role -> Text,

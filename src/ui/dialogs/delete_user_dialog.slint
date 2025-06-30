@@ -1,15 +1,15 @@
-// src/ui/dialogs/delete_product_dialog.slint 
+// src/ui/dialogs/delete_user_dialog.slint 
 import { StandardButton, VerticalBox } from "std-widgets.slint";
 
-export component DeleteProductDialog inherits Dialog {
+export component DeleteUserDialog inherits Dialog {
     callback confirmed();
     callback cancelled();
     
-    in-out property <string> product_name;
+    in-out property <string> username;
     
     title: "Confirmer la Suppression";
-    width: 350px;
-    height: 200px;
+    //width: 350px;
+    height: 220px;
     
     // UN SEUL élément non-bouton autorisé
     VerticalBox {
@@ -25,14 +25,14 @@ export component DeleteProductDialog inherits Dialog {
         }
         
         Text {
-            text: "Êtes-vous sûr de vouloir supprimer le produit :\n\"" + root.product_name + "\" ?";
+            text: "Êtes-vous sûr de vouloir supprimer l'utilisateur :\n\"" + root.username + "\" ?";
             font-size: 14px;
             horizontal-alignment: center;
             wrap: word-wrap;
         }
         
         Text {
-            text: "Cette action est irréversible.";
+            text: "Cet utilisateur perdra définitivement l'accès au système.";
             font-size: 12px;
             color: red;
             horizontal-alignment: center;

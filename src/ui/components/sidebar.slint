@@ -8,8 +8,6 @@ export component AppSidebar inherits Rectangle {
     in property <bool> is_admin;
     callback view-changed(int);
 
-    // --- CORRECTION : On définit une largeur fixe ici ---
-    // Cette valeur est maintenant indépendante de la fenêtre parente, ce qui casse la boucle.
     width: 250px; 
 
     background: rgba(255, 255, 255, 0.08);

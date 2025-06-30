@@ -88,13 +88,13 @@ export component LoginWindow inherits Window {
                             padding: 0px;
                             spacing: 0px;
                             
-                            // Conteneur fixe pour l'icône email
+                            // Conteneur fixe pour l'icône 
                             Rectangle {
                                 width: 50px;
                                 height: 55px;
                                 
                                 Text {
-                                    text: "✉️";
+                                    text: "👤";
                                     font-size: 18px;
                                     vertical-alignment: center;
                                     horizontal-alignment: center;
@@ -111,7 +111,7 @@ export component LoginWindow inherits Window {
                             }
                             
                             LineEdit {
-                                placeholder-text: "Email ou nom d'utilisateur";
+                                placeholder-text: "Nom d'utilisateur";
                                 text <=> root.login_text;
                                 enabled: !root.loading;
                                 font-size: 14px;

@@ -1,40 +1,193 @@
-// src/ui/views/users.slint (Corrigé)
-
-import { UserList } from "../components/user_list.slint";
+// src/ui/views/users_view.slint
+import { StandardTableView, ScrollView, Button } from "std-widgets.slint";
 import { UserUI } from "../components/models.slint";
 
-// Hériter d'un layout est une bonne pratique
 export component UsersView inherits VerticalLayout {
-    in property <bool> is_admin;
     in property <[UserUI]> users_model;
-    callback add_user_clicked;
-    callback delete_user_clicked(string);
+    callback request_users();
+    callback add_user_clicked();
+    callback edit_user_clicked(string);
+    callback delete_user_clicked(string, string);
+    callback reset_password_clicked(string, string); 
 
-    if root.is_admin: UserList {
-        users: root.users_model;
-        add-user => { root.add_user_clicked(); }
-        delete-user(user_id) => { root.delete_user_clicked(user_id); }
-    }
-    
-    if !root.is_admin: Rectangle {
-        background: rgba(255, 107, 107, 0.1);
-        border-radius: 16px;
-        //margin: 25px;
+
+    padding: 25px;
+    spacing: 15px;
+
+    // En-tête de la vue
+    HorizontalLayout {
+        spacing: 15px;
+        alignment: stretch;
         
-        VerticalLayout {
-            padding: 30px;
-            alignment: center;
-            spacing: 15px;
+        Text { 
+            text: "Gestion des Utilisateurs"; 
+            font-size: 28px; 
+            font-weight: 700; 
+            color: white;
+            vertical-alignment: center;
+        }
+        
+        Rectangle { 
+            // Spacer pour pousser les boutons à droite
+        }
+        
+        // Actions administrateur
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: end;
             
-            Text {
-                text: "⛔ Accès non autorisé";
-                font-size: 22px;
-                font-weight: 700;
-                color: #ff6b6b;
+            Button { 
+                text: "➕ Ajouter";
+                height: 40px; 
+                min-width: 120px;
+                primary: true;
+                clicked => { root.add_user_clicked(); } 
             }
-            Text {
-                text: "Cette section est réservée aux administrateurs.";
-                color: #ddd;
+        }
+        
+        Button { 
+            text: "🔄 Rafraîchir";
+            height: 40px; 
+            min-width: 120px; 
+            clicked => { root.request_users(); } 
+        }
+    }
+
+    // Message si pas de données
+    if root.users_model.length == 0 : Rectangle {
+        height: 200px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        
+        Text {
+            text: "Aucun utilisateur trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Tableau des utilisateurs 
+    if root.users_model.length > 0 : Rectangle {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        clip: true;
+
+        ScrollView {
+            viewport-width: self.visible-width;
+            
+            VerticalLayout {
+                padding: 20px;
+                spacing: 2px;
+                width: 100%;
+
+                // En-tête du tableau responsive
+                Rectangle {
+                    height: 45px;
+                    background: rgba(255, 255, 255, 0.15);
+                    border-radius: 8px;
+                    width: 100%;
+                    
+                    HorizontalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        spacing: 10px;
+                        
+                        // Colonnes avec proportions adaptées
+                        Rectangle {
+                            horizontal-stretch: 3; // Nom d'utilisateur
+                            min-width: 150px;
+                            Text { 
+                                text: "Nom d'utilisateur"; 
+                                font-weight: 600; 
+                                color: white; 
+                                vertical-alignment: center;
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 2; // Rôle
+                            min-width: 120px;
+                            Text { 
+                                text: "Rôle"; 
+                                font-weight: 600; 
+                                color: white; 
+                                horizontal-alignment: center; 
+                                vertical-alignment: center;
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 3; // Actions
+                            min-width: 150px;
+                            Text { 
+                                text: "Actions"; 
+                                font-weight: 600; 
+                                color: white; 
+                                horizontal-alignment: center; 
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Lignes de données responsive
+                for user[index] in root.users_model : Rectangle {
+                    height: 55px;
+                    background: mod(index, 2) == 0 ? rgba(255, 255, 255, 0.08) : rgba(255, 255, 255, 0.03);
+                    border-radius: 8px;
+                    width: 100%;
+                    
+                    // Effet hover
+                    touch-area := TouchArea {
+                        Rectangle {
+                            background: touch-area.has-hover ? rgba(255, 255, 255, 0.15) : transparent;
+                            border-radius: 8px;
+                        }
+                    }
+                    
+                    HorizontalLayout {
+                        padding-left: 15px;
+                        padding-right: 15px;
+                        spacing: 10px;
+                        
+                        // Proportions identiques à l'en-tête
+                        Rectangle {
+                            horizontal-stretch: 3;
+                            min-width: 150px;
+                            Text { 
+                                text: user.name; 
+                                color: white; 
+                                vertical-alignment: center;
+                                wrap: word-wrap;
+                                overflow: elide;
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 2;
+                            min-width: 120px;
+                            Text { 
+                                text: user.role; 
+                                color: user.role == "admin" ? #FFD54F : #E1BEE7;
+                                horizontal-alignment: center; 
+                                vertical-alignment: center;
+                                font-weight: 600; 
+                            }
+                        }
+                        // Actions
+                         Rectangle {
+                            horizontal-stretch: 3; 
+                            HorizontalLayout {
+                                spacing: 8px;
+                                alignment: center;
+                                                        
+                                Button { text: "✏️"; clicked => { root.edit_user_clicked(user.id); } }
+                                Button { text: "🔑"; clicked => { root.reset_password_clicked(user.id, user.name); } }
+                                Button { text: "🗑️"; clicked => { root.delete_user_clicked(user.id, user.name); } }
+                            }
+                        }   
+
+                    }
+                }
             }
         }
     }

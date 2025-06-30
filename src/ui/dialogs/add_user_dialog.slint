@@ -1,0 +1,73 @@
+// src/ui/dialogs/add_user_dialog.slint
+
+import { LineEdit, StandardButton, VerticalBox, ComboBox } from "std-widgets.slint";
+
+export component AddUserDialog inherits Dialog {
+    callback save_clicked(string, string, string); // name, password, role
+    callback cancelled();
+
+    in-out property <string> status_message;
+    in-out property <int> selected_role_index: 0;
+    in property <[string]> roles: ["User", "Admin"];
+    
+    title: "Ajouter un Utilisateur";
+    width: 400px;
+    height: 380px;
+    
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        
+        Text {
+            text: "Nouvel Utilisateur";
+            font-size: 18px;
+            font-weight: 600;
+            horizontal-alignment: center;
+        }
+        
+        // Champ nom d'utilisateur
+        Text { text: "Nom d'utilisateur:"; }
+        username_edit := LineEdit {
+            placeholder-text: "Entrez le nom d'utilisateur";
+            height: 35px;
+        }
+          
+        // Champ mot de passe
+        Text { text: "Mot de passe temporaire:"; }
+        password_edit := LineEdit {
+            placeholder-text: "Mot de passe";
+            input-type: InputType.password; 
+            height: 35px;
+        }
+        
+        Text { text: "Rôle:"; }
+        role_combo := ComboBox {
+            model: root.roles;
+            current-index <=> root.selected_role_index;
+            height: 35px;
+        }
+        
+        // Message de statut
+        if root.status_message != "" : Text {
+            text: root.status_message;
+            color: red;
+            font-size: 12px;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+    }
+    
+    StandardButton { kind: cancel; clicked => { root.cancelled();}}
+    
+    StandardButton { 
+        kind: ok;
+        enabled: username_edit.text != "" && password_edit.text != "";
+        clicked => {
+            root.save_clicked(
+                username_edit.text,
+                password_edit.text,
+                root.roles[root.selected_role_index]
+            );
+        }
+    }
+}

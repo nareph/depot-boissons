@@ -88,7 +88,7 @@ pub fn delete_product(product_id: Uuid) -> AppResult<usize> {
 
         // Ensuite, supprimer le produit
         use crate::schema::products::dsl::*;
-        // CORRECTION : On filtre la table `products` avant de la passer à `delete`
+        // On filtre la table `products` avant de la passer à `delete`
         let num_deleted = diesel::delete(products.filter(id.eq(product_id))).execute(conn)?;
 
         Ok(num_deleted)

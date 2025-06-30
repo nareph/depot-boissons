@@ -35,7 +35,6 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
     let admin_password = hash("admin123", DEFAULT_COST)?;
     let admin_user = NewUser {
         id: Uuid::new_v4(),
-        email: "admin@depot-boissons.com",
         password: &admin_password,
         name: "Administrateur",
         role: "Admin",

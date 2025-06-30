@@ -3,7 +3,8 @@ import { LineEdit, StandardButton, VerticalBox } from "std-widgets.slint";
 
 export component EditProductDialog inherits Dialog {
     callback save_clicked(string, string, string, int);
-    
+    callback cancelled();
+
     in-out property <string> product_id;
     in-out property <string> product_name;
     in-out property <string> base_unit_name;
@@ -70,6 +71,7 @@ export component EditProductDialog inherits Dialog {
     // Boutons StandardButton
     StandardButton { 
         kind: cancel; 
+        clicked => { root.cancelled();}
     }
     
     StandardButton { 

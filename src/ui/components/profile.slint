@@ -16,7 +16,6 @@ export component HeaderProfile inherits Rectangle {
     background: transparent; // L'ancre est invisible.
 
     // --- 1. Le contenu visible ET cliquable ---
-    // Ce Rectangle est ce que l'utilisateur voit et sur quoi il clique.
     button_visuals := Rectangle {
         width: 100%; // Prend toute la taille de l'ancre
         height: 100%;
@@ -64,7 +63,6 @@ export component HeaderProfile inherits Rectangle {
     }
     
     // --- 2. Le menu déroulant en tant que PopupWindow ---
-    // C'est un "frère" du bouton visible, pas un enfant. Il est positionné par rapport à l'ancre.
     dropdown := PopupWindow {
         x: 0;
         y: root.height + 5px; // Se positionne 5px SOUS l'ancre.

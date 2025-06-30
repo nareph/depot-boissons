@@ -28,7 +28,7 @@ pub fn show() -> AppResult<Option<User>> {
             ui.set_status_text("Connexion en cours...".into());
 
             thread::spawn(move || {
-                let auth_result = auth::authenticate_single_query(&login, &password);
+                let auth_result = auth::authenticate(&login, &password);
 
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(ui) = auth_ui_handle.upgrade() {

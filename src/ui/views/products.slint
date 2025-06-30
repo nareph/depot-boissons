@@ -1,4 +1,4 @@
-// src/ui/views/products_view.slint (version corrigée - alignement)
+// src/ui/views/products_view.slint 
 import { StandardTableView, ScrollView, Button } from "std-widgets.slint";
 import { ProductUI } from "../components/models.slint";
 
@@ -7,8 +7,8 @@ export component ProductsView inherits VerticalLayout {
     in property <bool> is_admin;
     callback request_products();
     callback add_product_clicked();
-    callback edit_product_clicked(int);
-    callback delete_product_clicked(int);
+    callback edit_product_clicked(string);
+    callback delete_product_clicked(string, string);
 
     padding: 25px;
     spacing: 15px;
@@ -67,7 +67,7 @@ export component ProductsView inherits VerticalLayout {
         }
     }
 
-    // Tableau des produits - CORRECTION: layout responsive
+    // Tableau des produits 
     if root.products_model.length > 0 : Rectangle {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 16px;
@@ -93,7 +93,7 @@ export component ProductsView inherits VerticalLayout {
                         padding-right: 15px;
                         spacing: 10px;
                         
-                        // CORRECTION: Utilisation de horizontal-stretch avec min-width
+                        // Utilisation de horizontal-stretch avec min-width
                         Rectangle {
                             horizontal-stretch: 4; // Plus d'espace pour le nom
                             min-width: 200px;
@@ -160,7 +160,7 @@ export component ProductsView inherits VerticalLayout {
                         padding-right: 15px;
                         spacing: 10px;
                         
-                        // CORRECTION: Proportions identiques à l'en-tête
+                        // Proportions identiques à l'en-tête
                         Rectangle {
                             horizontal-stretch: 4;
                             min-width: 200px;
@@ -210,14 +210,14 @@ export component ProductsView inherits VerticalLayout {
                                     text: "✏️";
                                     width: 40px;
                                     height: 32px;
-                                    clicked => { root.edit_product_clicked(index); }
+                                    clicked => { root.edit_product_clicked(product.id); }
                                 }
 
                                 Button {
                                     text: "🗑️";
                                     width: 40px;
                                     height: 32px;
-                                    clicked => { root.delete_product_clicked(index); }
+                                    clicked => { root.delete_product_clicked(product.id, product.name); }
                                 }
                             }
                         }
