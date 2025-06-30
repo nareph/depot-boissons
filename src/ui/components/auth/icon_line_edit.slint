@@ -1,0 +1,29 @@
+import { HorizontalBox, LineEdit } from "std-widgets.slint";
+
+export component IconLineEdit inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder_text;
+    in property <string> icon;
+    in property <bool> is_password: false;
+
+    height: 50px;
+    background: rgba(0,0,0, 0.2);
+    border-radius: 12px;
+    
+    HorizontalBox {
+        padding-left: 15px;
+        padding-right: 15px;
+        spacing: 12px;
+        //alignment: center;
+
+        Text { text: root.icon; font-size: 16px; color: #bdc3c7; }
+        
+        LineEdit {
+            placeholder-text: root.placeholder_text;
+            input-type: root.is_password ? InputType.password : InputType.text;
+            text <=> root.text;
+            font-size: 14px;
+            horizontal-stretch: 1;
+        }
+    }
+}

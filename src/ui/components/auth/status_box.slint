@@ -1,0 +1,24 @@
+export component StatusBox inherits Rectangle {
+    in property <string> text;
+    in property <bool> is_error: false;
+
+    height: 50px;
+    
+    // Visibilité
+    visible: root.text != "";
+    
+    // Style
+    background: root.is_error ? rgba(255, 107, 107, 0.2) : rgba(46, 213, 115, 0.2);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: root.is_error ? rgba(255, 107, 107, 0.5) : rgba(46, 213, 115, 0.5);
+
+    Text {
+        text: root.text;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: root.is_error ? #ff6b6b : #2ed573;
+    }
+}
