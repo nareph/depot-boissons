@@ -1,19 +1,33 @@
 // src/ui/views/products_view.slint 
-import { StandardTableView, ScrollView, Button } from "std-widgets.slint";
+import { StandardTableView, ScrollView, Button, LineEdit, ComboBox } from "std-widgets.slint";
 import { ProductUI } from "../components/models.slint";
 
 export component ProductsView inherits VerticalLayout {
     in property <[ProductUI]> products_model;
     in property <bool> is_admin;
+    in property <int> current_page: 1;
+    in property <int> total_pages: 1;
+    in property <int> total_products: 0;
+    in property <int> products_per_page: 10;
+    in property <string> search_query: "";
+    in property <string> stock_filter: "all"; // "all", "in_stock", "out_of_stock"
+    in property <string> sort_by: "name"; // "name", "stock", "price"
+    in property <string> sort_order: "asc"; // "asc", "desc"
+    
     callback request_products();
     callback add_product_clicked();
     callback edit_product_clicked(string);
     callback delete_product_clicked(string, string);
+    callback search_products(string);
+    callback filter_products(string);
+    callback sort_products(string, string);
+    callback change_page(int);
+    callback change_page_size(int);
 
     padding: 25px;
     spacing: 15px;
 
-    // En-tête de la vue
+    // En-tête avec titre et actions
     HorizontalLayout {
         spacing: 15px;
         alignment: stretch;
@@ -52,18 +66,246 @@ export component ProductsView inherits VerticalLayout {
         }
     }
 
+    // Barre de recherche et filtres
+    Rectangle {
+        height: 60px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        
+        HorizontalLayout {
+            padding: 15px;
+            spacing: 15px;
+            alignment: space-around;
+            
+            // Recherche
+            Rectangle {
+                width: 300px;
+                height: 35px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: rgba(255, 255, 255, 0.2);
+                
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 8px;
+                    alignment: center;
+                    
+                    Text {
+                        text: "🔍";
+                        color: rgba(255, 255, 255, 0.6);
+                        vertical-alignment: center;
+                    }
+                    
+                    search_input := LineEdit {
+                        placeholder-text: "Rechercher un produit...";
+                        text: root.search_query;
+                        font-size: 14px;
+                        edited => {
+                            root.search_products(self.text);
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 15px;
+                // Filtre par stock
+                Rectangle {
+                    width: 150px;
+                    
+                    VerticalLayout {
+                        spacing: 2px;
+                        
+                        Text {
+                            text: "Stock";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
+                        }
+                        
+                        stock_filter_combo := ComboBox {
+                            model: ["Tous", "En stock", "Rupture"];
+                            current-value: root.stock_filter == "all" ? "Tous" : 
+                                        root.stock_filter == "in_stock" ? "En stock" : "Rupture";
+                            selected => {
+                                root.filter_products(
+                                    self.current-value == "Tous" ? "all" :
+                                    self.current-value == "En stock" ? "in_stock" : "out_of_stock"
+                                );
+                            }
+                        }
+                    }
+                }
+                
+                // Tri
+                Rectangle {
+                    width: 150px;
+                    
+                    VerticalLayout {
+                        spacing: 2px;
+                        
+                        Text {
+                            text: "Trier par";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
+                        }
+                        
+                        sort_combo := ComboBox {
+                            model: ["Nom ↑", "Nom ↓", "Stock ↑", "Stock ↓"];
+                            current-value: root.sort_by == "name" && root.sort_order == "asc" ? "Nom ↑" :
+                                        root.sort_by == "name" && root.sort_order == "desc" ? "Nom ↓" :
+                                        root.sort_by == "stock" && root.sort_order == "asc" ? "Stock ↑" : "Stock ↓";
+                            selected => {
+                                if (self.current-value == "Nom ↑") {
+                                    root.sort_products("name", "asc");
+                                } else if (self.current-value == "Nom ↓") {
+                                    root.sort_products("name", "desc");
+                                } else if (self.current-value == "Stock ↑") {
+                                    root.sort_products("stock", "asc");
+                                } else if (self.current-value == "Stock ↓") {
+                                    root.sort_products("stock", "desc");
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    // Spacer
+                }
+                
+                // Éléments par page
+                Rectangle {
+                    width: 120px;
+                    
+                    VerticalLayout {
+                        spacing: 2px;
+                        
+                        Text {
+                            text: "Par page";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
+                        }
+                        
+                        page_size_combo := ComboBox {
+                            model: ["10", "25", "50", "100"];
+                            current-value: root.products_per_page;
+                            selected => {
+                                root.change_page_size(self.current-value.to-float());
+                            }
+                        }
+                    }
+                }
+
+            }
+            
+        }
+    }
+
+    // Information sur les résultats et pagination
+    HorizontalLayout {
+        spacing: 15px;
+        alignment: stretch;
+        
+        Text {
+            text: root.total_products > 0 ? 
+                "Affichage de " + ((root.current_page - 1) * root.products_per_page + 1) + 
+                " à " + min(root.current_page * root.products_per_page, root.total_products) + 
+                " sur " + root.total_products + " produits": "" ;
+               // "Aucun produit trouvé";
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+        
+        if root.total_products > 0 : Rectangle {
+            // Spacer
+        }
+        
+        // Contrôles de pagination
+        if root.total_pages > 1 : HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+            
+            Button {
+                text: "◀ Précédent";
+                enabled: root.current_page > 1;
+                height: 32px;
+                min-width: 80px;
+                clicked => {
+                    root.change_page(root.current_page - 1);
+                }
+            }
+            
+            Rectangle {
+                width: 100px;
+                height: 32px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                
+                Text {
+                    text: root.current_page + " / " + root.total_pages;
+                    color: white;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    font-size: 14px;
+                }
+            }
+            
+            Button {
+                text: "Suivant ▶";
+                enabled: root.current_page < root.total_pages;
+                height: 32px;
+                min-width: 80px;
+                clicked => {
+                    root.change_page(root.current_page + 1);
+                }
+            }
+        }
+    }
+
+    // Ce Rectangle prendra tout l'espace vertical restant dans le VerticalLayout
+    Rectangle {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        clip: true;
+
     // Message si pas de données
     if root.products_model.length == 0 : Rectangle {
         height: 200px;
         background: rgba(255, 255, 255, 0.05);
         border-radius: 16px;
         
-        Text {
-            text: "Aucun produit trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.7);
-            horizontal-alignment: center;
-            vertical-alignment: center;
+        VerticalLayout {
+            alignment: center;
+            spacing: 10px;
+            
+            Text {
+                text: "📦";
+                font-size: 48px;
+                horizontal-alignment: center;
+            }
+            
+            Text {
+                text: root.search_query != "" || root.stock_filter != "all" ? 
+                     "Aucun produit ne correspond à vos critères" :
+                     "Aucun produit trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
+                font-size: 16px;
+                color: rgba(255, 255, 255, 0.7);
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            
+            if root.search_query != "" || root.stock_filter != "all" : Button {
+                text: "Effacer les filtres";
+                height: 36px;
+                clicked => {
+                    search_input.text = "";
+                    root.search_products("");
+                    root.filter_products("all");
+                }
+            }
         }
     }
 
@@ -93,9 +335,8 @@ export component ProductsView inherits VerticalLayout {
                         padding-right: 15px;
                         spacing: 10px;
                         
-                        // Utilisation de horizontal-stretch avec min-width
                         Rectangle {
-                            horizontal-stretch: 4; // Plus d'espace pour le nom
+                            horizontal-stretch: 4;
                             min-width: 200px;
                             Text { 
                                 text: "Nom du Produit"; 
@@ -160,7 +401,6 @@ export component ProductsView inherits VerticalLayout {
                         padding-right: 15px;
                         spacing: 10px;
                         
-                        // Proportions identiques à l'en-tête
                         Rectangle {
                             horizontal-stretch: 4;
                             min-width: 200px;
@@ -197,7 +437,6 @@ export component ProductsView inherits VerticalLayout {
                             }
                         }
                         
-                        // Actions responsive
                         if root.is_admin : Rectangle {
                             horizontal-stretch: 1.5;
                             min-width: 100px;
@@ -226,4 +465,5 @@ export component ProductsView inherits VerticalLayout {
             }
         }
     }
+}
 }

@@ -24,6 +24,14 @@ export component MainWindow inherits Window {
     in property <string> today_sales_count;
     in property <[LowStockProductUI]> low_stock_products_model;
     in property <[ProductUI]> products_model;
+    in property <int> current_page: 1;
+    in property <int> total_pages: 1;
+    in property <int> total_products: 0;
+    in property <int> products_per_page: 10;
+    in property <string> search_query: "";
+    in property <string> stock_filter: "all"; // "all", "in_stock", "out_of_stock"
+    in property <string> sort_by: "name"; // "name", "stock", "price"
+    in property <string> sort_order: "asc"; 
     in property <[UserUI]> users_model;
     
     // Callbacks
@@ -41,6 +49,11 @@ export component MainWindow inherits Window {
     callback add_product_clicked();
     callback edit_product_clicked(string);      
     callback delete_product_clicked(string, string);    
+    callback search_products(string);
+    callback filter_products(string);
+    callback sort_products(string, string);
+    callback change_page(int);
+    callback change_page_size(int);
 
     // Callbacks de session
     callback change_password_clicked();
@@ -90,11 +103,25 @@ export component MainWindow inherits Window {
                         height: 100%;
                         products_model: root.products_model;
                         is_admin: root.is_admin;  
+                        current_page: root.current_page;
+                        total_pages: root.total_pages;
+                        total_products: root.total_products;
+                        products_per_page: root.products_per_page;
+                        search_query: root.search_query;
+                        stock_filter: root.stock_filter;
+                        sort_by: root.sort_by;
+                        sort_order: root.sort_order;
                         request_products => { root.request_products(); }
                         add_product_clicked => { root.add_product_clicked() }
                         edit_product_clicked(product_id) => { root.edit_product_clicked(product_id) }
                         delete_product_clicked(product_id, product_name) => { root.delete_product_clicked(product_id, product_name) }
+                        search_products(search_term) => { root.search_products(search_term); }
+                        filter_products(filter_term) => { root.filter_products(filter_term); }
+                        sort_products(sort_by, sort_order) => { root.sort_products(sort_by, sort_order); }
+                        change_page(page) => { root.change_page(page); }
+                        change_page_size(page_size) => { root.change_page_size(page_size); }
                     }
+
                     if root.current_view_index == 2: SalesView {
                         width: 100%;
                         height: 100%;
