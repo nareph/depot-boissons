@@ -1,6 +1,7 @@
 // src/main_window_manager/product_callbacks.rs
 
 use crate::{queries, ui};
+use bigdecimal::Num;
 use slint::{ComponentHandle, Weak};
 use uuid::Uuid;
 use std::sync::{Arc, Mutex};
@@ -24,7 +25,7 @@ impl Default for ProductsState {
             sort_by: queries::SortField::Name,
             sort_order: queries::SortOrder::Asc,
             current_page: 1,
-            page_size: 10,
+            page_size: 5,
         }
     }
 }
@@ -42,8 +43,8 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
         move || {
             if let Some(ui) = products_handle.upgrade() {
                 let current_state = state.lock().unwrap().clone();
-                log::info!("Chargement des produits - Page: {}, Recherche: '{}'", 
-                          current_state.current_page, current_state.search_query);
+                log::info!("Chargement des produits - Page: {}, Recherche: '{}', Filtre: {:?}", 
+                          current_state.current_page, current_state.search_query, current_state.stock_filter);
                 
                 let params = queries::ProductSearchParams::new()
                     .with_search(if current_state.search_query.is_empty() {
@@ -51,36 +52,29 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                     } else {
                         Some(current_state.search_query.clone())
                     })
-                    .with_stock_filter(current_state.stock_filter.clone())
-                    .with_sort(current_state.sort_by.clone(), current_state.sort_order.clone())
+                    .with_stock_filter(current_state.stock_filter)
+                    .with_sort(current_state.sort_by, current_state.sort_order)
                     .with_pagination(current_state.current_page, current_state.page_size);
                 
                 match queries::get_products_paginated(params) {
                     Ok(paginated_result) => {
+                        log::info!("Produits chargés: {} / {}", paginated_result.products.len(), paginated_result.total_count);
+                        
                         let model = paginated_result.products
                             .into_iter()
-                            .map(|(p, offers)| ui::ProductUI {
+                            .map(|p| ui::ProductUI {
                                 id: p.id.to_string().into(),
                                 name: p.name.into(),
-                                stock: format!(
-                                    "{} {}",
-                                    p.total_stock_in_base_units, p.base_unit_name
-                                )
-                                .into(),
-                                price_offers: offers
-                                    .into_iter()
-                                    .map(|(o, u)| format!("{} XAF / {}", o.price, u.name))
-                                    .collect::<Vec<_>>()
-                                    .join("\n")
-                                    .into(),
+                                stock: format!("{} ({})", p.stock_in_sale_units, p.packaging_description).into(),
+                                price_offers: format!("{} XAF", p.price_per_sale_unit).into(),
                             })
                             .collect::<Vec<_>>();
                         
                         ui.set_products_model(
                             std::rc::Rc::new(slint::VecModel::from(model)).into(),
                         );
-                        ui.set_current_page(paginated_result.page as i32);
-                        ui.set_total_pages(paginated_result.total_pages as i32);
+                        ui.set_product_current_page(paginated_result.page as i32);
+                        ui.set_product_total_pages(paginated_result.total_pages as i32);
                         ui.set_total_products(paginated_result.total_count as i32);
                         ui.set_products_per_page(paginated_result.page_size as i32);
                     }
@@ -91,8 +85,8 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                             std::rc::Rc::new(slint::VecModel::from(Vec::<ui::ProductUI>::new())).into(),
                         );
                         ui.set_total_products(0);
-                        ui.set_current_page(1);
-                        ui.set_total_pages(1);
+                        ui.set_product_current_page(1);
+                        ui.set_product_total_pages(1);
                     }
                 }
             }
@@ -124,7 +118,12 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                     let mut current_state = state.lock().unwrap();
                     current_state.search_query = query.to_string();
                     current_state.current_page = 1; // Retour à la première page lors d'une recherche
-                    ui.set_search_query(query);
+                    
+                    log::info!("Recherche de produits: '{}'", query);
+                    
+                    ui.set_product_search_query(query);
+                    ui.set_product_current_page(1);
+                    
                     drop(current_state);
                     load_fn();
                 }
@@ -149,7 +148,12 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                         _ => queries::StockFilter::All,
                     };
                     current_state.current_page = 1; // Retour à la première page lors d'un filtrage
-                    ui.set_stock_filter(filter_str);
+                    
+                    log::info!("Filtrage par stock: {}", filter_str);
+                    
+                    ui.set_product_stock_filter(filter_str);
+                    ui.set_product_current_page(1);
+                    
                     drop(current_state);
                     load_fn();
                 }
@@ -170,6 +174,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                     let mut current_state = state.lock().unwrap();
                     current_state.sort_by = match sort_field.as_str() {
                         "stock" => queries::SortField::Stock,
+                        "price" => queries::SortField::Price,
                         "created_at" => queries::SortField::CreatedAt,
                         _ => queries::SortField::Name,
                     };
@@ -177,8 +182,12 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                         "desc" => queries::SortOrder::Desc,
                         _ => queries::SortOrder::Asc,
                     };
-                    ui.set_sort_by(sort_field);
-                    ui.set_sort_order(sort_order);
+                    
+                    log::info!("Tri par {} {}", sort_field, sort_order);
+                    
+                    ui.set_product_sort_by(sort_field);
+                    ui.set_product_sort_order(sort_order);
+                    
                     drop(current_state);
                     load_fn();
                 }
@@ -194,10 +203,13 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
         main_window_handle
             .upgrade()
             .unwrap()
-            .on_change_page(move |page| {
+            .on_product_change_page(move |page| {
                 if let Some(_ui) = page_handle.upgrade() {
                     let mut current_state = state.lock().unwrap();
                     current_state.current_page = page as i64;
+                    
+                    log::info!("Changement de page: {}", page);
+                    
                     drop(current_state);
                     load_fn();
                 }
@@ -213,12 +225,17 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
         main_window_handle
             .upgrade()
             .unwrap()
-            .on_change_page_size(move |size| {
+            .on_product_change_page_size(move |size| {
                 if let Some(ui) = page_size_handle.upgrade() {
                     let mut current_state = state.lock().unwrap();
                     current_state.page_size = size as i64;
                     current_state.current_page = 1; // Retour à la première page
+                    
+                    log::info!("Changement de taille de page: {}", size);
+                    
                     ui.set_products_per_page(size);
+                    ui.set_product_current_page(1);
+                    
                     drop(current_state);
                     load_fn();
                 }
@@ -236,14 +253,19 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                     let dialog_handle = dialog.as_weak();
                     let load_fn_clone = load_fn.clone();
 
-                    dialog.on_save_clicked(move |name, base_unit, stock| {
+                    dialog.on_save_clicked(move |name, packaging, stock, price_str| {
                         if let Some(d) = dialog_handle.upgrade() {
-                            match queries::create_product(&name, &base_unit, stock) {
-                                Ok(_) => {
-                                    load_fn_clone();
-                                    let _ = d.hide();
-                                },
-                                Err(e) => d.set_status_message(format!("Erreur: {}", e).into()),
+                            match bigdecimal::BigDecimal::from_str_radix(&price_str, 10) {
+                                Ok(price) => {
+                                    match queries::create_product(name.to_string(), packaging.to_string(), stock, price) {
+                                        Ok(_) => {
+                                            load_fn_clone();
+                                            let _ = d.hide();
+                                        },
+                                        Err(e) => d.set_status_message(format!("Erreur: {}", e).into()),
+                                    }
+                                }
+                                Err(_) => d.set_status_message("Le prix est invalide.".into()),
                             }
                         }
                     });
@@ -271,21 +293,23 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                         if let Ok(dialog) = ui::EditProductDialog::new() {
                             dialog.set_product_id(product.id.to_string().into());
                             dialog.set_product_name(product.name.into());
-                            dialog.set_base_unit_name(product.base_unit_name.into());
-                            dialog.set_current_stock(product.total_stock_in_base_units);
+                            dialog.set_packaging_description(product.packaging_description.into());
+                            dialog.set_current_stock(product.stock_in_sale_units);
+                            dialog.set_price(product.price_per_sale_unit.to_string().into());
 
                             let dialog_handle = dialog.as_weak();
                             let load_fn_clone = load_fn.clone();
 
-                            dialog.on_save_clicked(move |id, name, base_unit, stock| {
+                            dialog.on_save_clicked(move |id, name, packaging, stock, price_str| {
                                 if let Some(d) = dialog_handle.upgrade() {
-                                    let uuid = Uuid::parse_str(&id).unwrap();
-                                    match queries::update_product(uuid, &name, &base_unit, stock) {
-                                        Ok(_) => {
-                                            load_fn_clone();
-                                            let _ = d.hide();
-                                        },
-                                        Err(e) => d.set_status_message(format!("Erreur: {}", e).into()),
+                                    if let (Ok(uuid), Ok(price)) = (Uuid::parse_str(&id), bigdecimal::BigDecimal::from_str_radix(&price_str, 10)) {
+                                        match queries::update_product(uuid, name.to_string(), packaging.to_string(), stock, price) {
+                                            Ok(_) => {
+                                                load_fn_clone();
+                                                let _ = d.hide();
+                                            },
+                                            Err(e) => d.set_status_message(format!("Erreur: {}", e).into()),
+                                        }
                                     }
                                 }
                             });
@@ -363,15 +387,16 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
     // Chargement initial des produits
     if let Some(ui) = main_window_handle.upgrade() {
         // Initialiser les propriétés de l'interface
-        ui.set_current_page(1);
-        ui.set_total_pages(1);
+        ui.set_product_current_page(1);
+        ui.set_product_total_pages(1);
         ui.set_total_products(0);
-        ui.set_products_per_page(10);
-        ui.set_search_query("".into());
-        ui.set_stock_filter("all".into());
-        ui.set_sort_by("name".into());
-        ui.set_sort_order("asc".into());
+        ui.set_products_per_page(5);
+        ui.set_product_search_query("".into());
+        ui.set_product_stock_filter("all".into());
+        ui.set_product_sort_by("name".into());
+        ui.set_product_sort_order("asc".into());
         
+        log::info!("Chargement initial des produits");
         // Charger les données
         load_products();
     }

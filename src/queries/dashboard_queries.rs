@@ -1,7 +1,7 @@
 // src/queries/dashboard_queries.rs
 use crate::{db, error::AppResult, models::Product};
 use bigdecimal::BigDecimal;
-use chrono::Local;
+use chrono::Utc;
 use diesel::{
     dsl::{count, sum},
     prelude::*,
@@ -12,18 +12,19 @@ pub fn get_today_sales_summary() -> AppResult<(BigDecimal, i64)> {
     use crate::schema::sales::dsl::*;
     let mut conn = db::get_conn()?;
 
-    let today = Local::now().date_naive();
-    let start_of_day = today.and_hms_opt(0, 0, 0).unwrap().and_utc();
-    let end_of_day = today.and_hms_opt(23, 59, 59).unwrap().and_utc();
+    let now_utc = Utc::now();
+    let today_utc_naive = now_utc.date_naive();
+    let start_of_day_utc = today_utc_naive.and_hms_opt(0, 0, 0).unwrap();
+    let end_of_day_utc = today_utc_naive.and_hms_opt(23, 59, 59).unwrap();
 
     log::info!(
         "Calcul du résumé des ventes entre {} et {}",
-        start_of_day,
-        end_of_day
+        start_of_day_utc,
+        end_of_day_utc
     );
 
     let summary = sales
-        .filter(date.between(start_of_day, end_of_day))
+        .filter(date.between(start_of_day_utc, end_of_day_utc))
         .select((sum(total_amount), count(id)))
         .first::<(Option<BigDecimal>, i64)>(&mut conn)?;
 
@@ -39,8 +40,8 @@ pub fn get_low_stock_products(threshold: i32) -> AppResult<Vec<Product>> {
     let mut conn = db::get_conn()?;
 
     let low_stock_items = products
-        .filter(total_stock_in_base_units.le(threshold))
-        .order(total_stock_in_base_units.asc())
+        .filter(stock_in_sale_units.le(threshold))
+        .order(stock_in_sale_units.asc())
         .load::<Product>(&mut conn)?;
 
     Ok(low_stock_items)

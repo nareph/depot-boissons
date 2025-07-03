@@ -1,6 +1,6 @@
-// Fichier : src/models.rs
+// src/models.rs
 
-use crate::schema::{packaging_units, product_offerings, products, sale_items, sales, users};
+use crate::schema::{products, sale_items, sales, users};
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
@@ -10,76 +10,30 @@ use uuid::Uuid;
 //================//
 //    PRODUCTS    //
 //================//
-// Représente un produit de base, comme "Guinness". Le stock est en unité de base (bouteille/canette).
+// Représente un produit fini (SKU) tel qu'il est vendu, avec son stock et son prix.
 #[derive(Queryable, Selectable, Identifiable, Serialize, Deserialize, Debug, Clone)]
 #[diesel(table_name = products)]
 pub struct Product {
     pub id: Uuid,
     pub name: String,
-    pub base_unit_name: String,
-    pub total_stock_in_base_units: i32,
+    pub packaging_description: String,
+    pub sku: Option<String>, // Le SKU est optionnel
+    pub stock_in_sale_units: i32,
+    pub price_per_sale_unit: BigDecimal,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Insertable, Serialize, Deserialize, Debug)]
+/// Représente les données nécessaires pour créer un nouveau produit fini.
+#[derive(Insertable, Debug)]
 #[diesel(table_name = products)]
-
-pub struct NewProduct<'a> {
-    pub id: Uuid,
-    pub name: &'a str,
-    pub base_unit_name: &'a str,
-    pub total_stock_in_base_units: i32,
-}
-
-//=====================//
-//  PACKAGING UNITS    //
-//=====================//
-// Représente un type de conditionnement, comme "Casier de 24".
-#[derive(Queryable, Selectable, Identifiable, Serialize, Deserialize, Debug, Clone)]
-#[diesel(table_name = packaging_units)]
-pub struct PackagingUnit {
+pub struct NewProduct {
     pub id: Uuid,
     pub name: String,
-    pub contained_base_units: i32,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Insertable, Serialize, Deserialize, Debug)]
-#[diesel(table_name = packaging_units)]
-pub struct NewPackagingUnit<'a> {
-    pub id: Uuid,
-    pub name: &'a str,
-    pub contained_base_units: i32,
-}
-
-//=======================//
-//  PRODUCT OFFERINGS    //
-//=======================//
-// L'entité centrale : ce qui est réellement vendu. Lie un produit, un conditionnement et un prix.
-#[derive(
-    Queryable, Selectable, Identifiable, Associations, Serialize, Deserialize, Debug, Clone,
-)]
-#[diesel(belongs_to(Product))]
-#[diesel(belongs_to(PackagingUnit))]
-#[diesel(table_name = product_offerings)]
-pub struct ProductOffering {
-    pub id: Uuid,
-    pub product_id: Uuid,
-    pub packaging_unit_id: Uuid,
-    pub price: BigDecimal,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Insertable, Serialize, Deserialize, Debug)]
-#[diesel(table_name = product_offerings)]
-pub struct NewProductOffering {
-    pub id: Uuid,
-    pub product_id: Uuid,
-    pub packaging_unit_id: Uuid,
-    pub price: BigDecimal,
+    pub packaging_description: String,
+    pub sku: Option<String>,
+    pub stock_in_sale_units: i32,
+    pub price_per_sale_unit: BigDecimal,
 }
 
 //============//
@@ -97,7 +51,7 @@ pub struct Sale {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Insertable, Serialize, Deserialize, Debug)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = sales)]
 pub struct NewSale<'a> {
     pub id: Uuid,
@@ -109,17 +63,17 @@ pub struct NewSale<'a> {
 //================//
 //  SALE ITEMS    //
 //================//
-// Représente une ligne sur une facture. Pointe vers une "ProductOffering".
+// Représente une ligne sur une facture.
 #[derive(
     Queryable, Selectable, Identifiable, Associations, Serialize, Deserialize, Debug, Clone,
 )]
 #[diesel(belongs_to(Sale))]
-#[diesel(belongs_to(ProductOffering))]
+#[diesel(belongs_to(Product))]
 #[diesel(table_name = sale_items)]
 pub struct SaleItem {
     pub id: Uuid,
     pub sale_id: Uuid,
-    pub product_offering_id: Uuid,
+    pub product_id: Uuid,
     pub quantity: i32,
     pub unit_price: BigDecimal,
     pub total_price: BigDecimal,
@@ -127,12 +81,12 @@ pub struct SaleItem {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Insertable, Serialize, Deserialize, Debug)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = sale_items)]
 pub struct NewSaleItem {
     pub id: Uuid,
     pub sale_id: Uuid,
-    pub product_offering_id: Uuid,
+    pub product_id: Uuid,
     pub quantity: i32,
     pub unit_price: BigDecimal,
     pub total_price: BigDecimal,
@@ -153,7 +107,7 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Insertable, Serialize, Deserialize, Debug)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = users)]
 pub struct NewUser<'a> {
     pub id: Uuid,

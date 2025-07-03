@@ -25,7 +25,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                                 name: p.name.into(),
                                 stock_info: format!(
                                     "{} {}",
-                                    p.total_stock_in_base_units, p.base_unit_name
+                                    p.stock_in_sale_units, p.packaging_description
                                 )
                                 .into(),
                             })

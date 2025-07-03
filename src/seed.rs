@@ -2,10 +2,8 @@
 
 use crate::{
     error::AppResult,
-    models::{
-        NewPackagingUnit, NewProduct, NewProductOffering, NewSale, NewSaleItem, NewUser,
-        PackagingUnit, Product, ProductOffering, Sale,
-    },
+    // On importe seulement les modèles dont on a besoin maintenant
+    models::{NewProduct, NewSale, NewSaleItem, NewUser, Product, Sale},
 };
 use bcrypt::{DEFAULT_COST, hash};
 use bigdecimal::BigDecimal;
@@ -16,21 +14,20 @@ use std::str::FromStr;
 use uuid::Uuid;
 
 pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
-    use crate::schema::{packaging_units, product_offerings, products, sale_items, sales, users};
+    // Le schéma importé est maintenant plus simple
+    use crate::schema::{products, sale_items, sales, users};
 
     log::info!("--- Début du seeding de la base de données ---");
 
-    // 1. Nettoyer les tables dans le bon ordre pour respecter les clés étrangères
+    // 1. Nettoyer les tables dans le bon ordre
     log::info!("Nettoyage des tables existantes...");
     diesel::delete(sale_items::table).execute(conn)?;
     diesel::delete(sales::table).execute(conn)?;
-    diesel::delete(product_offerings::table).execute(conn)?;
-    diesel::delete(packaging_units::table).execute(conn)?;
     diesel::delete(products::table).execute(conn)?;
     diesel::delete(users::table).execute(conn)?;
     log::info!("Tables nettoyées.");
 
-    // 2. Créer l'utilisateur administrateur
+    // 2. Créer l'utilisateur administrateur (ne change pas)
     log::info!("Création de l'utilisateur admin...");
     let admin_password = hash("admin123", DEFAULT_COST)?;
     let admin_user = NewUser {
@@ -45,67 +42,49 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
         .execute(conn)?;
     log::info!("Utilisateur admin créé.");
 
-    // 3. Créer les unités de conditionnement
-    log::info!("Création des unités de conditionnement...");
-    let packaging_data = vec![
-        NewPackagingUnit {
-            id: Uuid::new_v4(),
-            name: "Bouteille 65cl",
-            contained_base_units: 1,
-        },
-        NewPackagingUnit {
-            id: Uuid::new_v4(),
-            name: "Demi-casier (6 Bouteilles)",
-            contained_base_units: 6,
-        },
-        NewPackagingUnit {
-            id: Uuid::new_v4(),
-            name: "Casier (12 Bouteilles)",
-            contained_base_units: 12,
-        },
-        NewPackagingUnit {
-            id: Uuid::new_v4(),
-            name: "Bouteille 33cl",
-            contained_base_units: 1,
-        },
-        NewPackagingUnit {
-            id: Uuid::new_v4(),
-            name: "Casier (24 Bouteilles)",
-            contained_base_units: 24,
-        },
-    ];
-    let inserted_packaging_units = diesel::insert_into(packaging_units::table)
-        .values(&packaging_data)
-        .get_results::<PackagingUnit>(conn)?;
-    log::info!("Unités de conditionnement créées.");
-
-    // 4. Créer les produits de base
-    log::info!("Création des produits de base...");
+    // 3. Créer les produits finis (SKUs)
+    log::info!("Création des produits (SKUs)...");
     let products_data = vec![
         NewProduct {
             id: Uuid::new_v4(),
-            name: "Beaufort",
-            base_unit_name: "bouteille 65cl",
-            total_stock_in_base_units: 240,
+            name: "Castel Beer".to_string(),
+            packaging_description: "Casier 65cl de 12".to_string(),
+            sku: Some("CAS-65-CAS12".to_string()),
+            stock_in_sale_units: 100,
+            price_per_sale_unit: BigDecimal::from_str("8500.00")?,
         },
         NewProduct {
             id: Uuid::new_v4(),
-            name: "Guinness",
-            base_unit_name: "bouteille 33cl",
-            total_stock_in_base_units: 480,
+            name: "33 Export".to_string(),
+            packaging_description: "Casier 65cl de 12".to_string(),
+            sku: Some("33EXP-65-CAS12".to_string()),
+            stock_in_sale_units: 150,
+            price_per_sale_unit: BigDecimal::from_str("8500.00")?,
         },
         NewProduct {
             id: Uuid::new_v4(),
-            name: "Coca-Cola",
-            base_unit_name: "bouteille 33cl",
-            total_stock_in_base_units: 120,
+            name: "Guinness Smooth".to_string(),
+            packaging_description: "Casier 33cl de 24".to_string(),
+            sku: Some("GUIN-33-CAS24".to_string()),
+            stock_in_sale_units: 80,
+            price_per_sale_unit: BigDecimal::from_str("14500.00")?,
+        },
+        NewProduct {
+            id: Uuid::new_v4(),
+            name: "Supermont Eau".to_string(),
+            packaging_description: "Palette 1.5L de 12".to_string(),
+            sku: Some("SPMT-1.5-PAL12".to_string()),
+            stock_in_sale_units: 50,
+            price_per_sale_unit: BigDecimal::from_str("2500.00")?,
         },
         // On ajoute un produit avec un stock faible pour tester le dashboard
         NewProduct {
             id: Uuid::new_v4(),
-            name: "Fanta",
-            base_unit_name: "bouteille 33cl",
-            total_stock_in_base_units: 45,
+            name: "Coca-Cola".to_string(),
+            packaging_description: "Casier 33cl de 24".to_string(),
+            sku: Some("COKE-33-CAS24".to_string()),
+            stock_in_sale_units: 45, // <-- Stock faible
+            price_per_sale_unit: BigDecimal::from_str("11000.00")?,
         },
     ];
     let inserted_products = diesel::insert_into(products::table)
@@ -113,86 +92,7 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
         .get_results::<Product>(conn)?;
     log::info!("Produits créés.");
 
-    // 5. Créer les offres de produits
-    log::info!("Création des offres de produits...");
-    let beaufort = inserted_products
-        .iter()
-        .find(|p| p.name == "Beaufort")
-        .unwrap();
-    let guinness = inserted_products
-        .iter()
-        .find(|p| p.name == "Guinness")
-        .unwrap();
-    let coca = inserted_products
-        .iter()
-        .find(|p| p.name == "Coca-Cola")
-        .unwrap();
-    let fanta = inserted_products
-        .iter()
-        .find(|p| p.name == "Fanta")
-        .unwrap();
-
-    let bouteille_65cl = inserted_packaging_units
-        .iter()
-        .find(|u| u.name == "Bouteille 65cl")
-        .unwrap();
-    let casier_12 = inserted_packaging_units
-        .iter()
-        .find(|u| u.name == "Casier (12 Bouteilles)")
-        .unwrap();
-    let bouteille_33cl = inserted_packaging_units
-        .iter()
-        .find(|u| u.name == "Bouteille 33cl")
-        .unwrap();
-    let casier_24 = inserted_packaging_units
-        .iter()
-        .find(|u| u.name == "Casier (24 Bouteilles)")
-        .unwrap();
-
-    let offerings_data = vec![
-        NewProductOffering {
-            id: Uuid::new_v4(),
-            product_id: beaufort.id,
-            packaging_unit_id: bouteille_65cl.id,
-            price: BigDecimal::from_str("700.00")?,
-        },
-        NewProductOffering {
-            id: Uuid::new_v4(),
-            product_id: beaufort.id,
-            packaging_unit_id: casier_12.id,
-            price: BigDecimal::from_str("8000.00")?,
-        },
-        NewProductOffering {
-            id: Uuid::new_v4(),
-            product_id: guinness.id,
-            packaging_unit_id: bouteille_33cl.id,
-            price: BigDecimal::from_str("650.00")?,
-        },
-        NewProductOffering {
-            id: Uuid::new_v4(),
-            product_id: guinness.id,
-            packaging_unit_id: casier_24.id,
-            price: BigDecimal::from_str("15000.00")?,
-        },
-        NewProductOffering {
-            id: Uuid::new_v4(),
-            product_id: coca.id,
-            packaging_unit_id: bouteille_33cl.id,
-            price: BigDecimal::from_str("500.00")?,
-        },
-        NewProductOffering {
-            id: Uuid::new_v4(),
-            product_id: fanta.id,
-            packaging_unit_id: bouteille_33cl.id,
-            price: BigDecimal::from_str("500.00")?,
-        },
-    ];
-    let inserted_offerings = diesel::insert_into(product_offerings::table)
-        .values(&offerings_data)
-        .get_results::<ProductOffering>(conn)?;
-    log::info!("Offres créées.");
-
-    // 6. Créer des ventes de test pour aujourd'hui
+    // 4. Créer des ventes de test pour aujourd'hui
     log::info!("Création des ventes de test pour aujourd'hui...");
     let mut rng = rand::rng();
 
@@ -211,37 +111,37 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
         let mut sale_total = BigDecimal::from(0);
 
         for _ in 0..num_items {
-            let offering = &inserted_offerings[rng.random_range(0..inserted_offerings.len())];
-            let quantity = rng.random_range(1..=4);
+            // On choisit un produit au hasard dans la liste des produits insérés
+            let product_to_sell = &inserted_products[rng.random_range(0..inserted_products.len())];
+            // On vend entre 1 et 5 unités (casiers/palettes)
+            let quantity_sold = rng.random_range(1..=5);
+
+            let total_price =
+                &product_to_sell.price_per_sale_unit * BigDecimal::from(quantity_sold);
 
             let new_sale_item = NewSaleItem {
                 id: Uuid::new_v4(),
                 sale_id: sale.id,
-                product_offering_id: offering.id,
-                quantity,
-                unit_price: offering.price.clone(),
-                total_price: &offering.price * BigDecimal::from(quantity),
+                product_id: product_to_sell.id, // On utilise directement product_id
+                quantity: quantity_sold,
+                unit_price: product_to_sell.price_per_sale_unit.clone(),
+                total_price: total_price.clone(),
             };
             diesel::insert_into(sale_items::table)
                 .values(&new_sale_item)
                 .execute(conn)?;
 
-            sale_total += &new_sale_item.total_price;
+            sale_total += &total_price;
 
-            let packaging_unit = inserted_packaging_units
-                .iter()
-                .find(|u| u.id == offering.packaging_unit_id)
-                .unwrap();
-            let stock_to_remove = quantity * packaging_unit.contained_base_units;
-
-            diesel::update(products::table.find(offering.product_id))
+            // Mettre à jour le stock du produit
+            diesel::update(products::table.find(product_to_sell.id))
                 .set(
-                    products::total_stock_in_base_units
-                        .eq(products::total_stock_in_base_units - stock_to_remove),
+                    products::stock_in_sale_units.eq(products::stock_in_sale_units - quantity_sold),
                 )
                 .execute(conn)?;
         }
 
+        // Mettre à jour le montant total de la vente
         diesel::update(sales::table.find(sale.id))
             .set(sales::total_amount.eq(sale_total))
             .execute(conn)?;

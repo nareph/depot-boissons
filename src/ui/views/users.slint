@@ -1,20 +1,33 @@
 // src/ui/views/users_view.slint
-import { StandardTableView, ScrollView, Button } from "std-widgets.slint";
+import { StandardTableView, ScrollView, Button, LineEdit, ComboBox } from "std-widgets.slint";
 import { UserUI } from "../components/models.slint";
 
 export component UsersView inherits VerticalLayout {
-    in property <[UserUI]> users_model;
+    in-out property <[UserUI]> users_model;
+    in-out property <int> current_page: 1;
+    in-out property <int> total_pages: 1;
+    in-out property <int> total_users: 0;
+    in-out property <int> users_per_page: 5;
+    in-out property <string> search_query: "";
+    in-out property <string> role_filter: "all"; // "all", "admin", "user"
+    in-out property <string> sort_by: "name"; // "name", "role"
+    in-out property <string> sort_order: "asc"; // "asc", "desc"
+    
     callback request_users();
     callback add_user_clicked();
     callback edit_user_clicked(string);
     callback delete_user_clicked(string, string);
-    callback reset_password_clicked(string, string); 
-
+    callback reset_password_clicked(string, string);
+    callback search_users(string);
+    callback filter_users(string);
+    callback sort_users(string, string);
+    callback change_page(int);
+    callback change_page_size(int);
 
     padding: 25px;
     spacing: 15px;
 
-    // En-tête de la vue
+    // En-tête avec titre et actions
     HorizontalLayout {
         spacing: 15px;
         alignment: stretch;
@@ -53,139 +66,380 @@ export component UsersView inherits VerticalLayout {
         }
     }
 
-    // Message si pas de données
-    if root.users_model.length == 0 : Rectangle {
-        height: 200px;
+    // Barre de recherche et filtres
+    Rectangle {
+        height: 60px;
         background: rgba(255, 255, 255, 0.05);
-        border-radius: 16px;
+        border-radius: 12px;
         
-        Text {
-            text: "Aucun utilisateur trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.7);
-            horizontal-alignment: center;
-            vertical-alignment: center;
-        }
-    }
-
-    // Tableau des utilisateurs 
-    if root.users_model.length > 0 : Rectangle {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        clip: true;
-
-        ScrollView {
-            viewport-width: self.visible-width;
+        HorizontalLayout {
+            padding: 15px;
+            spacing: 15px;
+            alignment: space-around;
             
-            VerticalLayout {
-                padding: 20px;
-                spacing: 2px;
-                width: 100%;
-
-                // En-tête du tableau responsive
-                Rectangle {
-                    height: 45px;
-                    background: rgba(255, 255, 255, 0.15);
-                    border-radius: 8px;
-                    width: 100%;
+            // Recherche
+            Rectangle {
+                width: 300px;
+                height: 35px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: rgba(255, 255, 255, 0.2);
+                
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 8px;
+                    alignment: center;
                     
-                    HorizontalLayout {
-                        padding-left: 15px;
-                        padding-right: 15px;
-                        spacing: 10px;
+                    Text {
+                        text: "🔍";
+                        color: rgba(255, 255, 255, 0.6);
+                        vertical-alignment: center;
+                    }
+                    
+                    search_input := LineEdit {
+                        placeholder-text: "Rechercher un utilisateur...";
+                        text: root.search_query;
+                        font-size: 14px;
+                        edited => {
+                            root.search_users(self.text);
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 15px;
+                // Filtre par rôle
+                Rectangle {
+                    width: 150px;
+                    
+                    VerticalLayout {
+                        spacing: 2px;
                         
-                        // Colonnes avec proportions adaptées
-                        Rectangle {
-                            horizontal-stretch: 3; // Nom d'utilisateur
-                            min-width: 150px;
-                            Text { 
-                                text: "Nom d'utilisateur"; 
-                                font-weight: 600; 
-                                color: white; 
-                                vertical-alignment: center;
+                        Text {
+                            text: "Rôle";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
+                        }
+                        
+                        role_filter_combo := ComboBox {
+                            model: ["Tous", "Admin", "Utilisateur"];
+                            current-value: root.role_filter == "all" ? "Tous" : 
+                                        root.role_filter == "admin" ? "Admin" : "Utilisateur";
+                            selected => {
+                                root.filter_users(
+                                    self.current-value == "Tous" ? "all" :
+                                    self.current-value == "Admin" ? "Admin" : "User"
+                                );
                             }
                         }
-                        Rectangle {
-                            horizontal-stretch: 2; // Rôle
-                            min-width: 120px;
-                            Text { 
-                                text: "Rôle"; 
-                                font-weight: 600; 
-                                color: white; 
-                                horizontal-alignment: center; 
-                                vertical-alignment: center;
-                            }
+                    }
+                }
+                
+                // Tri
+                Rectangle {
+                    width: 150px;
+                    
+                    VerticalLayout {
+                        spacing: 2px;
+                        
+                        Text {
+                            text: "Trier par";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
                         }
-                        Rectangle {
-                            horizontal-stretch: 3; // Actions
-                            min-width: 150px;
-                            Text { 
-                                text: "Actions"; 
-                                font-weight: 600; 
-                                color: white; 
-                                horizontal-alignment: center; 
-                                vertical-alignment: center;
+                        
+                        sort_combo := ComboBox {
+                            model: ["Nom ↑", "Nom ↓", "Rôle ↑", "Rôle ↓"];
+                            current-value: root.sort_by == "name" && root.sort_order == "asc" ? "Nom ↑" :
+                                        root.sort_by == "name" && root.sort_order == "desc" ? "Nom ↓" :
+                                        root.sort_by == "role" && root.sort_order == "asc" ? "Rôle ↑" : "Rôle ↓";
+                            selected => {
+                                if (self.current-value == "Nom ↑") {
+                                    root.sort_users("name", "asc");
+                                } else if (self.current-value == "Nom ↓") {
+                                    root.sort_users("name", "desc");
+                                } else if (self.current-value == "Rôle ↑") {
+                                    root.sort_users("role", "asc");
+                                } else if (self.current-value == "Rôle ↓") {
+                                    root.sort_users("role", "desc");
+                                }
                             }
                         }
                     }
                 }
 
-                // Lignes de données responsive
-                for user[index] in root.users_model : Rectangle {
-                    height: 55px;
-                    background: mod(index, 2) == 0 ? rgba(255, 255, 255, 0.08) : rgba(255, 255, 255, 0.03);
-                    border-radius: 8px;
-                    width: 100%;
+                Rectangle {
+                    // Spacer
+                }
+                
+                // Éléments par page
+                Rectangle {
+                    width: 120px;
                     
-                    // Effet hover
-                    touch-area := TouchArea {
-                        Rectangle {
-                            background: touch-area.has-hover ? rgba(255, 255, 255, 0.15) : transparent;
-                            border-radius: 8px;
+                    VerticalLayout {
+                        spacing: 2px;
+                        
+                        Text {
+                            text: "Par page";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
+                        }
+                        
+                        page_size_combo := ComboBox {
+                            model: ["5", "10", "20", "30"];
+                            current-value: root.users_per_page;
+                            selected => {
+                                root.change_page_size(self.current-value.to-float());
+                            }
                         }
                     }
-                    
-                    HorizontalLayout {
-                        padding-left: 15px;
-                        padding-right: 15px;
-                        spacing: 10px;
-                        
-                        // Proportions identiques à l'en-tête
-                        Rectangle {
-                            horizontal-stretch: 3;
-                            min-width: 150px;
-                            Text { 
-                                text: user.name; 
-                                color: white; 
-                                vertical-alignment: center;
-                                wrap: word-wrap;
-                                overflow: elide;
-                            }
-                        }
-                        Rectangle {
-                            horizontal-stretch: 2;
-                            min-width: 120px;
-                            Text { 
-                                text: user.role; 
-                                color: user.role == "admin" ? #FFD54F : #E1BEE7;
-                                horizontal-alignment: center; 
-                                vertical-alignment: center;
-                                font-weight: 600; 
-                            }
-                        }
-                        // Actions
-                         Rectangle {
-                            horizontal-stretch: 3; 
-                            HorizontalLayout {
-                                spacing: 8px;
-                                alignment: center;
-                                                        
-                                Button { text: "✏️"; clicked => { root.edit_user_clicked(user.id); } }
-                                Button { text: "🔑"; clicked => { root.reset_password_clicked(user.id, user.name); } }
-                                Button { text: "🗑️"; clicked => { root.delete_user_clicked(user.id, user.name); } }
-                            }
-                        }   
+                }
+            }
+        }
+    }
 
+    // Information sur les résultats et pagination
+    HorizontalLayout {
+        spacing: 15px;
+        alignment: stretch;
+        
+        Text {
+            text: root.total_users > 0 ? 
+                "Affichage de " + ((root.current_page - 1) * root.users_per_page + 1) + 
+                " à " + min(root.current_page * root.users_per_page, root.total_users) + 
+                " sur " + root.total_users + " utilisateurs": "" ;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+        
+        if root.total_users > 0 : Rectangle {
+            // Spacer
+        }
+        
+        // Contrôles de pagination
+        if root.total_pages > 1 : HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+            
+            Button {
+                text: "◀ Précédent";
+                enabled: root.current_page > 1;
+                height: 32px;
+                min-width: 80px;
+                clicked => {
+                    root.change_page(root.current_page - 1);
+                }
+            }
+            
+            Rectangle {
+                width: 100px;
+                height: 32px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                
+                Text {
+                    text: root.current_page + " / " + root.total_pages;
+                    color: white;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    font-size: 14px;
+                }
+            }
+            
+            Button {
+                text: "Suivant ▶";
+                enabled: root.current_page < root.total_pages;
+                height: 32px;
+                min-width: 80px;
+                clicked => {
+                    root.change_page(root.current_page + 1);
+                }
+            }
+        }
+    }
+
+    // Ce Rectangle prendra tout l'espace vertical restant dans le VerticalLayout
+    Rectangle {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        clip: true;
+
+        // Message si pas de données
+        if root.users_model.length == 0 : Rectangle {
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            
+            VerticalLayout {
+                alignment: center;
+                spacing: 10px;
+                
+                Text {
+                    text: "👥";
+                    font-size: 48px;
+                    horizontal-alignment: center;
+                }
+                
+                Text {
+                    text: root.search_query != "" || root.role_filter != "all" ? 
+                         "Aucun utilisateur ne correspond à vos critères" :
+                         "Aucun utilisateur trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
+                    font-size: 16px;
+                    color: rgba(255, 255, 255, 0.7);
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                
+                if root.search_query != "" || root.role_filter != "all" : Button {
+                    text: "Effacer les filtres";
+                    height: 36px;
+                    clicked => {
+                        search_input.text = "";
+                        root.search_users("");
+                        root.filter_users("all");
+                    }
+                }
+            }
+        }
+
+        // Tableau des utilisateurs 
+        if root.users_model.length > 0 : Rectangle {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            clip: true;
+
+            ScrollView {
+                viewport-width: self.visible-width;
+                
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 2px;
+                    width: 100%;
+
+                    // En-tête du tableau responsive
+                    Rectangle {
+                        height: 45px;
+                        background: rgba(255, 255, 255, 0.15);
+                        border-radius: 8px;
+                        width: 100%;
+                        
+                        HorizontalLayout {
+                            padding-left: 15px;
+                            padding-right: 15px;
+                            spacing: 10px;
+                            
+                            Rectangle {
+                                horizontal-stretch: 4;
+                                min-width: 200px;
+                                Text { 
+                                    text: "Nom d'utilisateur"; 
+                                    font-weight: 600; 
+                                    color: white; 
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 2;
+                                min-width: 120px;
+                                Text { 
+                                    text: "Rôle"; 
+                                    font-weight: 600; 
+                                    color: white; 
+                                    horizontal-alignment: center; 
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 3;
+                                min-width: 180px;
+                                Text { 
+                                    text: "Actions"; 
+                                    font-weight: 600; 
+                                    color: white; 
+                                    horizontal-alignment: center; 
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    // Lignes de données responsive
+                    for user[index] in root.users_model : Rectangle {
+                        height: 55px;
+                        background: mod(index, 2) == 0 ? rgba(255, 255, 255, 0.08) : rgba(255, 255, 255, 0.03);
+                        border-radius: 8px;
+                        width: 100%;
+                        
+                        // Effet hover
+                        touch-area := TouchArea {
+                            Rectangle {
+                                background: touch-area.has-hover ? rgba(255, 255, 255, 0.15) : transparent;
+                                border-radius: 8px;
+                            }
+                        }
+                        
+                        HorizontalLayout {
+                            padding-left: 15px;
+                            padding-right: 15px;
+                            spacing: 10px;
+                            
+                            Rectangle {
+                                horizontal-stretch: 4;
+                                min-width: 200px;
+                                Text { 
+                                    text: user.name; 
+                                    color: white; 
+                                    vertical-alignment: center;
+                                    wrap: word-wrap;
+                                    overflow: elide;
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 2;
+                                min-width: 120px;
+                                Text { 
+                                    text: user.role; 
+                                    color: user.role == "admin" ? #FFD54F : #E1BEE7;
+                                    horizontal-alignment: center; 
+                                    vertical-alignment: center;
+                                    font-weight: 600; 
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 3;
+                                min-width: 180px;
+                                
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    alignment: center;
+                                    
+                                    Button {
+                                        text: "✏️";
+                                        width: 40px;
+                                        height: 32px;
+                                        clicked => { root.edit_user_clicked(user.id); }
+                                    }
+
+                                    Button {
+                                        text: "🔑";
+                                        width: 40px;
+                                        height: 32px;
+                                        clicked => { root.reset_password_clicked(user.id, user.name); }
+                                    }
+
+                                    Button {
+                                        text: "🗑️";
+                                        width: 40px;
+                                        height: 32px;
+                                        clicked => { root.delete_user_clicked(user.id, user.name); }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

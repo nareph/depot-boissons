@@ -1,83 +1,47 @@
 // src/ui/dialogs/add_product_dialog.slint
+
 import { LineEdit, StandardButton, VerticalBox } from "std-widgets.slint";
 
 export component AddProductDialog inherits Dialog {
-    callback save_clicked(string, string, int);
+    callback save_clicked(string, string, int, string); // name, packaging, stock, price
     callback cancelled();
 
     in-out property <string> status_message;
     
     title: "Ajouter un Produit";
     width: 400px;
-    height: 380px;
+    height: 460px;
     
-    // UN SEUL élément non-bouton autorisé
     VerticalBox {
-        padding: 20px;
-        spacing: 15px;
+        padding: 20px; spacing: 15px;
+        Text { text: "Nouveau Produit"; font-size: 18px; font-weight: 600; horizontal-alignment: center; }
         
-        Text {
-            text: "Nouveau Produit";
-            font-size: 18px;
-            font-weight: 600;
-            horizontal-alignment: center;
-        }
+        Text { text: "Nom de la boisson (ex: Isenbeck):"; }
+        name_edit := LineEdit { placeholder-text: "Entrez le nom de la boisson"; }
         
-        // Champ nom du produit
-        Text {
-            text: "Nom du produit:";
-            font-size: 14px;
-        }
-        name_edit := LineEdit {
-            placeholder-text: "Entrez le nom du produit";
-            height: 35px;
-        }
+        Text { text: "Description du conditionnement (ex: Casier 65cl de 12):"; }
+        packaging_edit := LineEdit { placeholder-text: "Ex: Casier de 12 bouteilles"; }
         
-        // Champ unité de base
-        Text {
-            text: "Unité de base:";
-            font-size: 14px;
-        }
-        unit_edit := LineEdit {
-            placeholder-text: "Ex: bouteille, casier";
-            height: 35px;
-        }
+        Text { text: "Stock initial (en unités de vente):"; }
+        stock_edit := LineEdit { placeholder-text: "Ex: 100 (pour 100 casiers)."; input-type: InputType.number; }
+
+        Text { text: "Prix par unité de vente (en XAF):"; }
+        price_edit := LineEdit { placeholder-text: "Ex: 9600"; input-type: InputType.number; }
         
-        // Champ stock initial
-        Text {
-            text: "Stock initial:";
-            font-size: 14px;
-        }
-        stock_edit := LineEdit {
-            placeholder-text: "Quantité initiale";
-            input-type: number;
-            height: 35px;
-        }
-        
-        // Message de statut
-        if root.status_message != "" : Text {
-            text: root.status_message;
-            color: red;
-            font-size: 12px;
-            horizontal-alignment: center;
-            wrap: word-wrap;
-        }
+        if root.status_message != "" : Text { text: root.status_message; color: red; wrap: word-wrap; }
     }
     
-    // Boutons StandardButton
-    StandardButton { 
-        kind: cancel; 
-        clicked => { root.cancelled();}
-    }
+    StandardButton { kind: cancel; clicked => { root.cancelled(); } }
     
     StandardButton { 
         kind: ok; 
-        enabled: name_edit.text != "" && unit_edit.text != "" && stock_edit.text != "";
+        enabled: name_edit.text != "" && packaging_edit.text != "" && stock_edit.text != "" && price_edit.text != "";
         clicked => {
             root.save_clicked(
                 name_edit.text,
-                unit_edit.text,
-                stock_edit.text.to-float()
+                packaging_edit.text,
+                stock_edit.text.to-float(),
+                price_edit.text
             );
         }
     }

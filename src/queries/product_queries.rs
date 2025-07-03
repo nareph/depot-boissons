@@ -1,13 +1,16 @@
 // src/queries/product_queries.rs
+
 use crate::{
     db,
     error::AppResult,
-    models::{NewProduct, PackagingUnit, Product, ProductOffering},
-    schema::{packaging_units, products},
+    models::{NewProduct, Product},
+    schema,
 };
-use chrono::Utc;
+use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use uuid::Uuid;
+
+use super::SortOrder;
 
 #[derive(Debug, Clone)]
 pub struct ProductSearchParams {
@@ -19,29 +22,24 @@ pub struct ProductSearchParams {
     pub page_size: i64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum StockFilter {
     All,
     InStock,    // stock > 0
     OutOfStock, // stock <= 0
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum SortField {
     Name,
     Stock,
+    Price,
     CreatedAt,
-}
-
-#[derive(Debug, Clone)]
-pub enum SortOrder {
-    Asc,
-    Desc,
 }
 
 #[derive(Debug)]
 pub struct PaginatedProducts {
-    pub products: Vec<(Product, Vec<(ProductOffering, PackagingUnit)>)>,
+    pub products: Vec<Product>,
     pub total_count: i64,
     pub page: i64,
     pub page_size: i64,
@@ -89,79 +87,67 @@ impl ProductSearchParams {
     }
 }
 
-/// Récupère tous les produits avec pagination, filtres et tri
+/// Récupère les produits avec pagination, filtres et tri, adapté au nouveau schéma.
 pub fn get_products_paginated(params: ProductSearchParams) -> AppResult<PaginatedProducts> {
+    use crate::schema::products::dsl::*;
+
     let mut conn = db::get_conn()?;
 
-    // Construction de la requête de base pour le comptage
-    let mut count_query = products::table.into_boxed();
+    // Construction de la requête de comptage
+    let mut count_query = schema::products::table.into_boxed();
 
     // Application des filtres pour le comptage
     if let Some(search) = &params.search_query {
         let search_pattern = format!("%{}%", search.to_lowercase());
         count_query = count_query.filter(
-            products::name
-                .ilike(search_pattern.clone())
-                .or(products::base_unit_name.ilike(search_pattern)),
+            name.ilike(search_pattern.clone())
+                .or(packaging_description.ilike(search_pattern)),
         );
     }
 
     match params.stock_filter {
         StockFilter::All => {}
-        StockFilter::InStock => {
-            count_query = count_query.filter(products::total_stock_in_base_units.gt(0));
-        }
-        StockFilter::OutOfStock => {
-            count_query = count_query.filter(products::total_stock_in_base_units.le(0));
-        }
+        StockFilter::InStock => count_query = count_query.filter(stock_in_sale_units.gt(0)),
+        StockFilter::OutOfStock => count_query = count_query.filter(stock_in_sale_units.le(0)),
     }
 
-    // Exécution du comptage
+    // Comptage du total (avec les filtres appliqués)
     let total_count = count_query.count().get_result::<i64>(&mut conn)?;
 
-    // Construction de la requête pour les données
-    let mut data_query = products::table.into_boxed();
+    // Construction de la requête de données avec les mêmes filtres
+    let mut data_query = schema::products::table.into_boxed();
 
     // Application des mêmes filtres pour les données
     if let Some(search) = &params.search_query {
         let search_pattern = format!("%{}%", search.to_lowercase());
         data_query = data_query.filter(
-            products::name
-                .ilike(search_pattern.clone())
-                .or(products::base_unit_name.ilike(search_pattern)),
+            name.ilike(search_pattern.clone())
+                .or(packaging_description.ilike(search_pattern)),
         );
     }
 
     match params.stock_filter {
         StockFilter::All => {}
-        StockFilter::InStock => {
-            data_query = data_query.filter(products::total_stock_in_base_units.gt(0));
-        }
-        StockFilter::OutOfStock => {
-            data_query = data_query.filter(products::total_stock_in_base_units.le(0));
-        }
+        StockFilter::InStock => data_query = data_query.filter(stock_in_sale_units.gt(0)),
+        StockFilter::OutOfStock => data_query = data_query.filter(stock_in_sale_units.le(0)),
     }
-
-    // Application du tri
     match (params.sort_by, params.sort_order) {
-        (SortField::Name, SortOrder::Asc) => {
-            data_query = data_query.order(products::name.asc());
-        }
-        (SortField::Name, SortOrder::Desc) => {
-            data_query = data_query.order(products::name.desc());
-        }
+        (SortField::Name, SortOrder::Asc) => data_query = data_query.order(name.asc()),
+        (SortField::Name, SortOrder::Desc) => data_query = data_query.order(name.desc()),
         (SortField::Stock, SortOrder::Asc) => {
-            data_query = data_query.order(products::total_stock_in_base_units.asc());
+            data_query = data_query.order(stock_in_sale_units.asc())
         }
         (SortField::Stock, SortOrder::Desc) => {
-            data_query = data_query.order(products::total_stock_in_base_units.desc());
+            data_query = data_query.order(stock_in_sale_units.desc())
         }
-        (SortField::CreatedAt, SortOrder::Asc) => {
-            data_query = data_query.order(products::created_at.asc());
+        (SortField::Price, SortOrder::Asc) => {
+            data_query = data_query.order(price_per_sale_unit.asc())
         }
-        (SortField::CreatedAt, SortOrder::Desc) => {
-            data_query = data_query.order(products::created_at.desc());
+        (SortField::Price, SortOrder::Desc) => {
+            data_query = data_query.order(price_per_sale_unit.desc())
         }
+        (SortField::CreatedAt, SortOrder::Asc) => data_query = data_query.order(created_at.asc()),
+        (SortField::CreatedAt, SortOrder::Desc) => data_query = data_query.order(created_at.desc()),
     }
 
     // Application de la pagination
@@ -171,22 +157,10 @@ pub fn get_products_paginated(params: ProductSearchParams) -> AppResult<Paginate
         .offset(offset)
         .load::<Product>(&mut conn)?;
 
-    // Chargement des offres pour les produits de cette page
-    let all_offerings = ProductOffering::belonging_to(&products_page)
-        .inner_join(packaging_units::table)
-        .load::<(ProductOffering, PackagingUnit)>(&mut conn)?;
-
-    let offerings_by_product = all_offerings.grouped_by(&products_page);
-
-    let products_with_offers = products_page
-        .into_iter()
-        .zip(offerings_by_product)
-        .collect::<Vec<_>>();
-
     let total_pages = (total_count + params.page_size - 1) / params.page_size;
 
     Ok(PaginatedProducts {
-        products: products_with_offers,
+        products: products_page,
         total_count,
         page: params.page,
         page_size: params.page_size,
@@ -194,156 +168,102 @@ pub fn get_products_paginated(params: ProductSearchParams) -> AppResult<Paginate
     })
 }
 
-/// Récupère tous les produits et leurs offres associées (version simple, conservée pour compatibilité)
-pub fn get_all_products_with_offers()
--> AppResult<Vec<(Product, Vec<(ProductOffering, PackagingUnit)>)>> {
-    let params = ProductSearchParams::new().with_pagination(1, 1000); // Grande page pour récupérer tout
-    let result = get_products_paginated(params)?;
-    Ok(result.products)
-}
-
-/// Recherche rapide de produits par nom
-pub fn search_products_by_name(query: &str, limit: Option<i64>) -> AppResult<Vec<Product>> {
-    use crate::schema::products::dsl::*;
-    let mut conn = db::get_conn()?;
-
-    let search_pattern = format!("%{}%", query.to_lowercase());
-    let mut db_query = products
-        .filter(name.ilike(&search_pattern))
-        .order(name.asc())
-        .into_boxed();
-
-    if let Some(limit_val) = limit {
-        db_query = db_query.limit(limit_val);
-    }
-
-    let results = db_query.load::<Product>(&mut conn)?;
-    Ok(results)
-}
-
-/// Obtient les statistiques des produits
-pub fn get_products_statistics() -> AppResult<ProductStatistics> {
-    use crate::schema::products::dsl::*;
-    let mut conn = db::get_conn()?;
-
-    let total_products = products.count().get_result::<i64>(&mut conn)?;
-
-    let in_stock_count = products
-        .filter(total_stock_in_base_units.gt(0))
-        .count()
-        .get_result::<i64>(&mut conn)?;
-
-    let out_of_stock_count = products
-        .filter(total_stock_in_base_units.le(0))
-        .count()
-        .get_result::<i64>(&mut conn)?;
-
-    let total_stock_value: Option<i64> = products
-        .select(diesel::dsl::sql::<
-            diesel::sql_types::Nullable<diesel::sql_types::BigInt>,
-        >("SUM(total_stock_in_base_units)"))
-        .first(&mut conn)?;
-
-    Ok(ProductStatistics {
-        total_products,
-        in_stock_count,
-        out_of_stock_count,
-        total_stock_value: total_stock_value.unwrap_or(0),
-    })
-}
-
-#[derive(Debug)]
-pub struct ProductStatistics {
-    pub total_products: i64,
-    pub in_stock_count: i64,
-    pub out_of_stock_count: i64,
-    pub total_stock_value: i64,
-}
-
-/// Crée un nouveau produit
+/// Crée un nouveau produit fini (SKU).
 pub fn create_product(
-    _name: &str,
-    _base_unit_name: &str,
-    initial_stock: i32,
+    p_name: String,
+    p_packaging: String,
+    p_stock: i32,
+    p_price: BigDecimal,
 ) -> AppResult<Product> {
     use crate::schema::products::dsl::*;
+
     let mut conn = db::get_conn()?;
+
+    let new_sku = generate_sku(&p_name, &p_packaging);
 
     let new_product = NewProduct {
         id: Uuid::new_v4(),
-        name: _name,
-        base_unit_name: _base_unit_name,
-        total_stock_in_base_units: initial_stock,
+        name: p_name,
+        packaging_description: p_packaging,
+        sku: Some(new_sku),
+        stock_in_sale_units: p_stock,
+        price_per_sale_unit: p_price,
     };
 
-    let created_product = diesel::insert_into(products)
+    diesel::insert_into(products)
         .values(&new_product)
-        .get_result(&mut conn)?;
-
-    Ok(created_product)
+        .get_result(&mut conn)
+        .map_err(Into::into)
 }
 
-/// Met à jour un produit existant
+/// Met à jour un produit existant.
 pub fn update_product(
     product_id: Uuid,
-    new_name: &str,
-    new_base_unit_name: &str,
+    new_name: String,
+    new_packaging: String,
     new_stock: i32,
+    new_price: BigDecimal,
 ) -> AppResult<Product> {
     use crate::schema::products::dsl::*;
     let mut conn = db::get_conn()?;
 
-    let updated_product = diesel::update(products.find(product_id))
+    let new_sku = generate_sku(&new_name, &new_packaging);
+
+    diesel::update(products.find(product_id))
         .set((
             name.eq(new_name),
-            base_unit_name.eq(new_base_unit_name),
-            total_stock_in_base_units.eq(new_stock),
-            updated_at.eq(Utc::now()),
+            packaging_description.eq(new_packaging),
+            sku.eq(Some(new_sku)),
+            stock_in_sale_units.eq(new_stock),
+            price_per_sale_unit.eq(new_price),
         ))
-        .get_result(&mut conn)?;
-
-    Ok(updated_product)
+        .get_result(&mut conn)
+        .map_err(Into::into)
 }
 
-/// Supprime un produit et toutes ses offres associées
+/// Supprime un produit. La suppression échouera si des ventes y sont liées (contrainte FK).
 pub fn delete_product(product_id: Uuid) -> AppResult<usize> {
+    use crate::schema::products::dsl::*;
     let mut conn = db::get_conn()?;
-
-    conn.transaction::<_, diesel::result::Error, _>(|conn| {
-        // Supprimer d'abord les offres
-        use crate::schema::product_offerings::dsl as offerings_dsl;
-        diesel::delete(
-            offerings_dsl::product_offerings.filter(offerings_dsl::product_id.eq(product_id)),
-        )
-        .execute(conn)?;
-
-        // Ensuite, supprimer le produit
-        use crate::schema::products::dsl::*;
-        let num_deleted = diesel::delete(products.filter(id.eq(product_id))).execute(conn)?;
-
-        Ok(num_deleted)
-    })
-    .map_err(Into::into)
+    diesel::delete(products.find(product_id))
+        .execute(&mut conn)
+        .map_err(Into::into)
 }
 
-/// Récupère un produit par son ID
+/// Récupère un produit par son ID.
 pub fn get_product_by_id(product_id: Uuid) -> AppResult<Product> {
     use crate::schema::products::dsl::*;
     let mut conn = db::get_conn()?;
+    products
+        .find(product_id)
+        .first::<Product>(&mut conn)
+        .map_err(Into::into)
+}
 
-    let product = products.find(product_id).first::<Product>(&mut conn)?;
-    Ok(product)
+/// Fonction d'aide pour générer un SKU standardisé.
+fn generate_sku(product_name: &str, packaging: &str) -> String {
+    let name_part = product_name
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .take(4)
+        .collect::<String>()
+        .to_uppercase();
+    let packaging_part = packaging
+        .split_whitespace()
+        .filter_map(|w| w.chars().next())
+        .collect::<String>()
+        .to_uppercase();
+    let unique_part = &Uuid::new_v4().to_string()[..6];
+    format!("{}-{}-{}", name_part, packaging_part, unique_part)
 }
 
 /// Vérifie si un produit peut être supprimé (pas de ventes associées)
-pub fn can_delete_product(product_id: Uuid) -> AppResult<bool> {
-    use crate::schema::{product_offerings, sale_items};
+pub fn can_delete_product(p_id: Uuid) -> AppResult<bool> {
+    use crate::schema::sale_items::dsl::*;
     let mut conn = db::get_conn()?;
 
-    // Vérifier s'il existe des ventes liées à ce produit
-    let sales_count = sale_items::table
-        .inner_join(product_offerings::table)
-        .filter(product_offerings::product_id.eq(product_id))
+    let sales_count = sale_items
+        .filter(product_id.eq(p_id))
         .count()
         .get_result::<i64>(&mut conn)?;
 
