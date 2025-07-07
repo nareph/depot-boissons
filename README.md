@@ -1,6 +1,6 @@
 # Dépôt de Boissons - Système de Gestion
 
-![Screenshot de l'application](/.screenshots/dashboard.png) <!-- Suggestion: Ajoutez un screenshot de votre application ici -->
+![Screenshot de l'application](/screenshots/dashboard.png) <!-- Suggestion: Ajoutez un screenshot de votre application ici -->
 
 **Dépôt de Boissons** est une application de bureau moderne conçue pour la gestion complète d'un dépôt de boissons. Développée en **Rust** avec l'interface utilisateur **Slint**, elle offre une solution robuste, performante et multi-plateforme (Windows, macOS, Linux) pour gérer les stocks, les ventes, les clients et les utilisateurs.
 
