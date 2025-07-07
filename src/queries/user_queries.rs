@@ -27,12 +27,6 @@ pub enum UserSortBy {
     CreatedAt,
 }
 
-// #[derive(Debug, Clone)]
-// pub enum SortOrder {
-//     Asc,
-//     Desc,
-// }
-
 #[derive(Debug, Clone)]
 pub struct UserPagination {
     pub page: i64,

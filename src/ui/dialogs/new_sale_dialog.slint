@@ -1,0 +1,339 @@
+import { Button, ScrollView, StandardButton, LineEdit, ComboBox } from "std-widgets.slint";
+import { ProductUI, CartItem } from "../components/models.slint";
+
+export component NewSaleDialog inherits Dialog {
+    in property <[ProductUI]> available_products;
+    in property <[CartItem]> cart_items;
+    in property <string> total_amount: "0";
+    in property <string> status_message: "";
+    
+    callback save_clicked();
+    callback cancel_clicked();
+    callback add_to_cart(string, int); // product_id, quantity
+    callback remove_from_cart(string); // product_id
+    callback update_cart_quantity(string, int); // product_id, new_quantity
+    callback clear_cart();
+    
+    width: 900px;
+    height: 700px;
+    title: "Nouvelle Vente";
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 15px;
+        
+        // En-tête
+        HorizontalLayout {
+            spacing: 15px;
+            Text {
+                text: "Total:";
+                width: 100px;
+                vertical-alignment: center;
+                font-weight: 600;
+            }
+            Text {
+                text: root.total_amount + " XAF";
+                font-size: 20px;
+                font-weight: 700;
+                color: #4CAF50;
+                vertical-alignment: center;
+            }
+        }
+        
+        // Section principale avec deux colonnes
+        HorizontalLayout {
+            spacing: 20px;
+            
+            // Colonne gauche - Produits disponibles
+            VerticalLayout {
+                spacing: 10px;
+                width: 50%;
+                
+                Text {
+                    text: "Produits disponibles";
+                    font-weight: 700;
+                    font-size: 16px;
+                }
+                
+                Rectangle {
+                    height: 400px;
+                    background: rgba(240, 240, 240, 0.3);
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #ddd;
+                    
+                    ScrollView {
+                        VerticalLayout {
+                            spacing: 2px;
+                            
+                            for product in root.available_products : Rectangle {
+                                height: 80px;
+                                background: rgba(255, 255, 255, 0.8);
+                                border-radius: 6px;
+                                
+                                // Effet hover
+                                product_touch := TouchArea {
+                                    Rectangle {
+                                        background: product_touch.has-hover ? rgba(33, 150, 243, 0.1) : transparent;
+                                        border-radius: 6px;
+                                    }
+                                }
+                                
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                    padding: 10px;
+                                    
+                                    VerticalLayout {
+                                        spacing: 5px;
+                                        
+                                        Text {
+                                            text: product.name;
+                                            font-weight: 600;
+                                            color: #333;
+                                            wrap: word-wrap;
+                                        }
+                                        
+                                        HorizontalLayout {
+                                            spacing: 15px;
+                                            
+                                            Text {
+                                                text: "Stock: " + product.stock;
+                                                color: #666;
+                                                font-size: 12px;
+                                            }
+                                            
+                                            Text {
+                                                text: product.price_offers + " XAF";
+                                                color: #4CAF50;
+                                                font-weight: 600;
+                                                font-size: 14px;
+                                            }
+                                        }
+                                    }
+                                    
+                                    Rectangle { } // Spacer
+                                    
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        alignment: center;
+                                        
+                                        quantity_input := LineEdit {
+                                            text: "1";
+                                            width: 50px;
+                                            height: 30px;
+                                            horizontal-alignment: center;
+                                            input-type: number;
+                                        }
+                                        
+                                        Button {
+                                            text: "Ajouter";
+                                            width: 70px;
+                                            height: 30px;
+                                            primary: true;
+                                            enabled: product.stock > 0;
+                                            clicked => {
+                                                if (quantity_input.text.to-float() > 0 && quantity_input.text.to-float() <= product.stock) {
+                                                    root.add_to_cart(product.id, quantity_input.text.to-float());
+                                                    quantity_input.text = "1";
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Colonne droite - Panier
+            VerticalLayout {
+                spacing: 10px;
+                width: 50%;
+                
+                HorizontalLayout {
+                    spacing: 10px;
+                    
+                    Text {
+                        text: "Panier (" + root.cart_items.length + " articles)";
+                        font-weight: 700;
+                        font-size: 16px;
+                    }
+                    
+                    Rectangle { } // Spacer
+                    
+                    if root.cart_items.length > 0 : Button {
+                        text: "Vider";
+                        width: 60px;
+                        height: 25px;
+                        colorize-icon: true;
+                        //icon: @image-url("icons/trash.svg");
+                        clicked => { root.clear_cart(); }
+                    }
+                }
+                
+                Rectangle {
+                    height: 400px;
+                    background: rgba(240, 240, 240, 0.3);
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: #ddd;
+                    
+                    if root.cart_items.length == 0 : Rectangle {
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 10px;
+                            
+                            Text {
+                                text: "🛒";
+                                font-size: 48px;
+                                horizontal-alignment: center;
+                                color: #bbb;
+                            }
+                            
+                            Text {
+                                text: "Panier vide";
+                                horizontal-alignment: center;
+                                color: #999;
+                                font-size: 16px;
+                            }
+                            
+                            Text {
+                                text: "Ajoutez des produits pour commencer";
+                                horizontal-alignment: center;
+                                color: #bbb;
+                                font-size: 14px;
+                            }
+                        }
+                    }
+                    
+                    if root.cart_items.length > 0 : ScrollView {
+                        VerticalLayout {
+                            spacing: 2px;
+                            
+                            for item in root.cart_items : Rectangle {
+                                height: 90px;
+                                background: rgba(255, 255, 255, 0.9);
+                                border-radius: 6px;
+                                
+                                VerticalLayout {
+                                    spacing: 8px;
+                                    padding: 12px;
+                                    
+                                    HorizontalLayout {
+                                        spacing: 10px;
+                                        
+                                        Text {
+                                            text: item.product_name;
+                                            font-weight: 600;
+                                            color: #333;
+                                            wrap: word-wrap;
+                                        }
+                                        
+                                        Rectangle { } // Spacer
+                                        
+                                        Button {
+                                            text: "✕";
+                                            width: 25px;
+                                            height: 25px;
+                                            colorize-icon: true;
+                                            clicked => { root.remove_from_cart(item.product_id); }
+                                        }
+                                    }
+                                    
+                                    HorizontalLayout {
+                                        spacing: 15px;
+                                        
+                                        Text {
+                                            text: item.unit_price + " XAF";
+                                            color: #666;
+                                            font-size: 12px;
+                                        }
+                                        
+                                        Rectangle { } // Spacer
+                                        
+                                        HorizontalLayout {
+                                            spacing: 8px;
+                                            alignment: center;
+                                            
+                                            Button {
+                                                text: "−";
+                                                width: 25px;
+                                                height: 25px;
+                                                enabled: item.quantity > 1;
+                                                clicked => { 
+                                                    root.update_cart_quantity(item.product_id, item.quantity - 1);
+                                                }
+                                            }
+                                            
+                                            Text {
+                                                text: item.quantity;
+                                                width: 30px;
+                                                horizontal-alignment: center;
+                                                vertical-alignment: center;
+                                                font-weight: 600;
+                                            }
+                                            
+                                            Button {
+                                                text: "+";
+                                                width: 25px;
+                                                height: 25px;
+                                                clicked => { 
+                                                    root.update_cart_quantity(item.product_id, item.quantity + 1);
+                                                }
+                                            }
+                                        }
+                                        
+                                        Text {
+                                            text: item.total_price + " XAF";
+                                            color: #4CAF50;
+                                            font-weight: 600;
+                                            font-size: 14px;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Message de statut
+        if root.status_message != "" : Rectangle {
+            height: 40px;
+            background: rgba(244, 67, 54, 0.1);
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: #f44336;
+            
+            Text {
+                text: root.status_message;
+                color: #f44336;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                font-weight: 600;
+            }
+        }
+        
+        // Boutons d'action
+        HorizontalLayout {
+            spacing: 15px;
+            alignment: end;
+            
+            Button { 
+                text: "Annuler";
+                clicked => { root.cancel_clicked(); }
+            }
+            
+            Button {
+                text: "Valider la vente";
+                width: 150px;
+                height: 40px;
+                primary: true;
+                enabled: root.cart_items.length > 0;
+                clicked => { root.save_clicked(); }
+            }
+        }
+    }
+}

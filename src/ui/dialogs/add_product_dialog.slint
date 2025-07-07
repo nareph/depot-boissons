@@ -4,7 +4,6 @@ import { LineEdit, StandardButton, VerticalBox } from "std-widgets.slint";
 
 export component AddProductDialog inherits Dialog {
     callback save_clicked(string, string, int, string); // name, packaging, stock, price
-    callback cancelled();
 
     in-out property <string> status_message;
     
@@ -31,7 +30,7 @@ export component AddProductDialog inherits Dialog {
         if root.status_message != "" : Text { text: root.status_message; color: red; wrap: word-wrap; }
     }
     
-    StandardButton { kind: cancel; clicked => { root.cancelled(); } }
+    StandardButton { kind: cancel; }
     
     StandardButton { 
         kind: ok; 

@@ -16,4 +16,52 @@ export struct UserUI {
     role: string, 
 }
 
+// Structure pour les articles dans le panier
+export struct CartItem {
+    product_id: string,
+    product_name: string,
+    unit_price: string,
+    quantity: int,
+    total_price: string,
+    packaging_description: string,
+}
+
+// Structure pour les articles d'une vente
+export struct SaleItemUI {
+    id: string,
+    product_name: string,
+    packaging_description: string,
+    quantity: int,
+    unit_price: string,
+    total_price: string,
+}
+
+// Structure pour une vente dans la liste
+export struct SaleUI {
+    id: string,
+    sale_number: string,
+    date: string,
+    total_amount: string,
+    seller_name: string,
+    items_count: int,
+    items: [SaleItemUI],
+    show_details: bool,
+}
+
+// Structure pour les détails complets d'une vente
+export struct SaleDetailsUI {
+    id: string,
+    sale_number: string,
+    date: string,
+    total_amount: string,
+    seller_name: string,
+    items: [SaleItemUI],
+}
+
+export struct ReceiptItemUI {
+    product_name: string,
+    quantity: string,
+    unit_price: string,
+    total_price: string,
+}
 

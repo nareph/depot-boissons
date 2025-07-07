@@ -2,9 +2,7 @@
 import { StandardButton, VerticalBox } from "std-widgets.slint";
 
 export component DeleteUserDialog inherits Dialog {
-    callback confirmed();
-    callback cancelled();
-    
+   
     in-out property <string> username;
     
     title: "Confirmer la Suppression";
@@ -42,11 +40,9 @@ export component DeleteUserDialog inherits Dialog {
     // Boutons StandardButton
     StandardButton { 
         kind: cancel; 
-        clicked => { root.cancelled(); }
     }
     
     StandardButton { 
         kind: ok; 
-        clicked => { root.confirmed(); }
     }
 }

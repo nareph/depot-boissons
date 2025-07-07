@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 pub struct ProductsState {
     pub search_query: String,
     pub stock_filter: queries::StockFilter,
-    pub sort_by: queries::SortField,
+    pub sort_by: queries::SortFieldProduct,
     pub sort_order: queries::SortOrder,
     pub current_page: i64,
     pub page_size: i64,
@@ -22,7 +22,7 @@ impl Default for ProductsState {
         Self {
             search_query: String::new(),
             stock_filter: queries::StockFilter::All,
-            sort_by: queries::SortField::Name,
+            sort_by: queries::SortFieldProduct::Name,
             sort_order: queries::SortOrder::Asc,
             current_page: 1,
             page_size: 5,
@@ -173,10 +173,10 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                 if let Some(ui) = sort_handle.upgrade() {
                     let mut current_state = state.lock().unwrap();
                     current_state.sort_by = match sort_field.as_str() {
-                        "stock" => queries::SortField::Stock,
-                        "price" => queries::SortField::Price,
-                        "created_at" => queries::SortField::CreatedAt,
-                        _ => queries::SortField::Name,
+                        "stock" => queries::SortFieldProduct::Stock,
+                        "price" => queries::SortFieldProduct::Price,
+                        "created_at" => queries::SortFieldProduct::CreatedAt,
+                        _ => queries::SortFieldProduct::Name,
                     };
                     current_state.sort_order = match sort_order.as_str() {
                         "desc" => queries::SortOrder::Desc,
@@ -270,7 +270,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                         }
                     });
                     let dialog_handle_cancel = dialog.as_weak();
-                    dialog.on_cancelled(move || {
+                    dialog.on_cancel_clicked(move || {
                         if let Some(d) = dialog_handle_cancel.upgrade() {
                             let _ = d.hide();
                         }
@@ -314,7 +314,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                                 }
                             });
                             let dialog_handle_cancel = dialog.as_weak();
-                            dialog.on_cancelled(move || {
+                            dialog.on_cancel_clicked(move || {
                                 if let Some(d) = dialog_handle_cancel.upgrade() {
                                     let _ = d.hide();
                                 }
@@ -342,11 +342,18 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                                 let dialog_handle = dialog.as_weak();
                                 let load_fn_clone = load_fn.clone();
                                 
-                                dialog.on_confirmed(move || {
+                                dialog.on_ok_clicked(move || {
                                     if let Some(d) = dialog_handle.clone().upgrade() {
                                         if queries::delete_product(product_id).is_ok() {
                                             load_fn_clone();
                                         }
+                                        let _ = d.hide();
+                                    }
+                                });
+
+                                let dialog_handle_cancel = dialog.as_weak();
+                                dialog.on_cancel_clicked(move || {
+                                    if let Some(d) = dialog_handle_cancel.upgrade() {
                                         let _ = d.hide();
                                     }
                                 });

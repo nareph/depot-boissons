@@ -4,12 +4,14 @@
 pub mod dashboard_queries;
 pub mod password_queries;
 pub mod product_queries;
+pub mod sale_queries;
 pub mod user_queries;
 
 // Rendre toutes les fonctions publiques accessibles directement via `queries::...`
 pub use dashboard_queries::*;
 pub use password_queries::*;
 pub use product_queries::*;
+pub use sale_queries::*;
 pub use user_queries::*;
 
 // Types communs pour la pagination et le tri
@@ -36,13 +38,8 @@ impl Default for Pagination {
 
 // Trait générique pour les résultats paginés
 pub trait PaginatedResult<T> {
-    fn new(
-        items: Vec<T>,
-        total_count: i64,
-        current_page: i64,
-        per_page: i64,
-    ) -> Self;
-    
+    fn new(items: Vec<T>, total_count: i64, current_page: i64, per_page: i64) -> Self;
+
     fn total_pages(&self) -> i64;
     fn has_previous(&self) -> bool;
     fn has_next(&self) -> bool;
@@ -69,15 +66,15 @@ impl<T> PaginatedResult<T> for PaginatedList<T> {
             per_page,
         }
     }
-    
+
     fn total_pages(&self) -> i64 {
         self.total_pages
     }
-    
+
     fn has_previous(&self) -> bool {
         self.current_page > 1
     }
-    
+
     fn has_next(&self) -> bool {
         self.current_page < self.total_pages
     }

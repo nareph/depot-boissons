@@ -30,8 +30,9 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
     // 2. Créer l'utilisateur administrateur (ne change pas)
     log::info!("Création de l'utilisateur admin...");
     let admin_password = hash("admin123", DEFAULT_COST)?;
+    let admin_id = Uuid::new_v4();
     let admin_user = NewUser {
-        id: Uuid::new_v4(),
+        id: admin_id,
         password: &admin_password,
         name: "Administrateur",
         role: "Admin",
@@ -99,7 +100,8 @@ pub fn seed_database(conn: &mut PgConnection) -> AppResult<()> {
     for i in 1..=5 {
         let new_sale = NewSale {
             id: Uuid::new_v4(),
-            sale_number: &format!("VTE-{:05}", i),
+            user_id: admin_id,
+            sale_number: format!("VTE-{:05}", i),
             total_amount: BigDecimal::from(0),
             date: Utc::now(), // La vente a lieu "maintenant"
         };

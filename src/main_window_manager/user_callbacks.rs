@@ -25,12 +25,11 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
             log::info!("load_users_with_filters appelé avec: search_term={:?}, role_filter={:?}, page={}, per_page={}", 
                       filter.search_term, filter.role_filter, pagination.page, pagination.per_page);
             
-            // Mettre à jour l'état partagé - IMPORTANT: utiliser un scope limité
+            // Mettre à jour l'état partagé
             {
                 let mut state_borrow = state.borrow_mut();
                 state_borrow.0 = filter.clone();
                 state_borrow.1 = pagination.clone();
-                // Le borrow_mut est automatiquement libéré ici
             }
 
             match queries::user_queries::get_users_paginated(current_user_id, filter.clone(), pagination.clone()) {
@@ -295,7 +294,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                         }
                     });
                     let dialog_handle_cancel = dialog.as_weak();
-                    dialog.on_cancelled(move || {
+                    dialog.on_cancel_clicked(move || {
                         if let Some(d) = dialog_handle_cancel.upgrade() {
                             let _ = d.hide();
                         }
@@ -360,7 +359,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                                 });
 
                                 let dialog_handle_cancel = dialog.as_weak();
-                                dialog.on_cancelled(move || {
+                                dialog.on_cancel_clicked(move || {
                                     if let Some(d) = dialog_handle_cancel.upgrade() {
                                         let _ = d.hide();
                                     }
@@ -389,7 +388,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                     let main_ui_handle = ui.as_weak();
                     let dialog_handle = dialog.as_weak();
 
-                    dialog.on_confirmed(move || {
+                    dialog.on_ok_clicked(move || {
                         if let Some(d) = dialog_handle.upgrade() {
                             if let Ok(user_id) = Uuid::parse_str(&user_id_str) {
                                 if queries::user_queries::delete_user(user_id).is_ok() {
@@ -404,7 +403,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                     });
 
                     let dialog_handle_cancel = dialog.as_weak();
-                    dialog.on_cancelled(move || {
+                    dialog.on_cancel_clicked(move || {
                         if let Some(d) = dialog_handle_cancel.upgrade() {
                             log::info!("Suppression annulée par l'utilisateur.");
                             let _ = d.hide(); // On ferme simplement la fenêtre
@@ -430,7 +429,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                 );
                 
                 let dialog_handle = dialog.as_weak();
-                dialog.on_confirmed(move || {
+                dialog.on_ok_clicked(move || {
                     // L'admin a confirmé, on procède à la réinitialisation
                     if let Some(d) = dialog_handle.upgrade() {
                         let _ = d.hide(); // Ferme la dialog de confirmation
@@ -470,7 +469,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                 });
                 
                 let dialog_handle_cancel = dialog.as_weak();
-                dialog.on_cancelled(move || {
+                dialog.on_cancel_clicked(move || {
                     // L'admin a annulé
                     if let Some(d) = dialog_handle_cancel.upgrade() {
                         log::info!("Réinitialisation annulée.");

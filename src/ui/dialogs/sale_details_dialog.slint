@@ -1,0 +1,181 @@
+import { Button, ScrollView } from "std-widgets.slint";
+import { SaleDetailsUI } from "../components/models.slint";
+
+export component SaleDetailsDialog inherits Dialog {
+    in property <SaleDetailsUI> sale_details;
+    callback close_clicked();
+    callback print_clicked();
+
+    
+    width: 700px;
+    height: 600px;
+    title: "Détails de la Vente";
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 15px;
+        
+        // En-tête
+        HorizontalLayout {
+            spacing: 15px;
+            
+            VerticalLayout {
+                spacing: 5px;
+                
+                HorizontalLayout {
+                    Text {
+                        text: "N° Vente:";
+                        font-weight: 700;
+                        width: 100px;
+                    }
+                    Text {
+                        text: root.sale_details.sale_number;
+                    }
+                }
+                
+                HorizontalLayout {
+                    Text {
+                        text: "Date:";
+                        font-weight: 700;
+                        width: 100px;
+                    }
+                    Text {
+                        text: root.sale_details.date;
+                    }
+                }
+                
+                HorizontalLayout {
+                    Text {
+                        text: "Vendeur:";
+                        font-weight: 700;
+                        width: 100px;
+                    }
+                    Text {
+                        text: root.sale_details.seller_name;
+                    }
+                }
+            }
+            
+            Rectangle { } // Spacer
+            
+            VerticalLayout {
+                Text {
+                    text: "Montant Total:";
+                    font-weight: 700;
+                    horizontal-alignment: right;
+                }
+                Text {
+                    text: root.sale_details.total_amount;
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #4CAF50;
+                    horizontal-alignment: right;
+                }
+            }
+        }
+        
+        // Liste des articles
+        Text {
+            text: "Articles vendus:";
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        Rectangle {
+            height: 350px;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: #555;
+            
+            ScrollView {
+                VerticalLayout {
+                    spacing: 0;
+                    
+                    // En-tête du tableau
+                    Rectangle {
+                        height: 40px;
+                        background: #f0f0f0;
+                        
+                        HorizontalLayout {
+                            spacing: 10px;
+                            padding: 5px;
+                            
+                            Text {
+                                text: "Produit";
+                                font-weight: 700;
+                                width: 40%;
+                            }
+                            Text {
+                                text: "Conditionnement";
+                                font-weight: 700;
+                                width: 20%;
+                            }
+                            Text {
+                                text: "Quantité";
+                                font-weight: 700;
+                                width: 15%;
+                                horizontal-alignment: center;
+                            }
+                            Text {
+                                text: "Prix";
+                                font-weight: 700;
+                                width: 25%;
+                                horizontal-alignment: right;
+                            }
+                        }
+                    }
+                    
+                    // Articles
+                    for item[idx] in root.sale_details.items : Rectangle {
+                        height: 50px;
+                        background: mod(idx, 2) == 0 ? #ffffff : #f9f9f9;
+                        
+                        HorizontalLayout {
+                            spacing: 10px;
+                            padding: 5px;
+                            
+                            Text {
+                                text: item.product_name;
+                                width: 40%;
+                                wrap: word-wrap;
+                            }
+                            Text {
+                                text: item.packaging_description;
+                                width: 20%;
+                            }
+                            Text {
+                                text: item.quantity;
+                                width: 15%;
+                                horizontal-alignment: center;
+                            }
+                            Text {
+                                text: item.total_price;
+                                width: 25%;
+                                horizontal-alignment: right;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Boutons
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: end;
+            
+            Button {
+                text: "Fermer";
+                width: 100px;
+                clicked => { root.close_clicked(); }
+            }
+            
+            Button {
+                text: "Imprimer le ticket";
+                width: 150px;
+                primary: true;
+                clicked => { root.print_clicked(); }
+            }
+        }
+    }
+}

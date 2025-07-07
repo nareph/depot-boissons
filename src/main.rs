@@ -1,4 +1,5 @@
-// src/main.rs (Refactorisé)
+// src/main.rs
+#![recursion_limit = "256"]
 
 // Déclarer tous les modules de l'application
 pub mod auth;

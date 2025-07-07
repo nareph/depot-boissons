@@ -7,7 +7,7 @@ import { DashboardView } from "./views/dashboard.slint";
 import { ProductsView } from "./views/products.slint";
 import { SalesView } from "./views/sales.slint";
 import { UsersView } from "./views/users.slint";
-import { LowStockProductUI, ProductUI, UserUI } from "./components/models.slint";
+import { LowStockProductUI, ProductUI, UserUI, SaleUI } from "./components/models.slint";
 
 export component MainWindow inherits Window {
     title: "Tableau de Bord - Dépôt de Boissons";
@@ -47,11 +47,23 @@ export component MainWindow inherits Window {
     in property <string> role_filter: "all"; // "all", "admin", "user"
     in property <string> user_sort_by: "name"; // "name", "role"
     in property <string> user_sort_order: "asc"; // "asc", "desc"
+
+    // === PROPRIÉTÉS POUR LA VUE VENTES ===
+    in property <[SaleUI]> sales_model;
+    in property <int> sale_current_page: 1;
+    in property <int> sale_total_pages: 1;
+    in property <int> total_sales: 0;
+    in property <int> sales_per_page: 5;
+    in property <string> sale_search_query: "";
+    in property <string> date_filter: "all";
+    in property <string> sale_sort_by: "date";
+    in property <string> sale_sort_order: "desc";
     
     // Callbacks
     callback request_dashboard_data();
     callback request_products();
     callback request_users();
+    callback request_sales();
 
     // Callbacks pour les utilisateurs
     callback add_user_clicked();
@@ -75,6 +87,15 @@ export component MainWindow inherits Window {
    // (préfixés pour éviter les conflits)
     callback product_change_page(int);
     callback product_change_page_size(int);
+
+   // Callbacks pour les ventes
+    callback add_sale_clicked();
+    callback view_sale_details(string);
+    callback search_sales(string);
+    callback filter_sales(string);
+    callback sort_sales(string, string);
+    callback sale_change_page(int);
+    callback sale_change_page_size(int);
 
     // Callbacks de session
     callback change_password_clicked();
@@ -146,6 +167,24 @@ export component MainWindow inherits Window {
                     if root.current_view_index == 2: SalesView {
                         width: 100%;
                         height: 100%;
+                        sales_model: root.sales_model;
+                        is_admin: root.is_admin;  
+                        current_page: root.sale_current_page;
+                        total_pages: root.sale_total_pages;
+                        total_sales: root.total_sales;
+                        sales_per_page: root.sales_per_page;
+                        search_query: root.sale_search_query;
+                        date_filter: root.date_filter;
+                        sort_by: root.sale_sort_by;
+                        sort_order: root.sale_sort_order;
+                        request_sales => { root.request_sales(); }
+                        add_sale_clicked => { root.add_sale_clicked(); }
+                        view_sale_details(sale_id) => { root.view_sale_details(sale_id); }
+                        search_sales(search_term) => { root.search_sales(search_term); }
+                        filter_sales(filter_term) => { root.filter_sales(filter_term); }
+                        sort_sales(sort_by, sort_order) => { root.sort_sales(sort_by, sort_order); }
+                        change_page(page) => { root.sale_change_page(page); }
+                        change_page_size(page_size) => { root.sale_change_page_size(page_size); }
                     }
                     if root.current_view_index == 3: UsersView {
                         width: 100%;

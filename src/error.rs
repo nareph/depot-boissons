@@ -27,6 +27,12 @@ pub enum AppError {
     /// Erreur spécifique au processus d'authentification (ex: mauvais mot de passe).
     Authentication(String),
 
+    /// Erreur d'autorisation (ex: accès refusé à une ressource).
+    Unauthorized(String),
+
+    ///
+    ValidationError(String),
+
     /// Erreur standard d'entrée/sortie.
     Io(std::io::Error),
 
@@ -42,6 +48,8 @@ impl fmt::Display for AppError {
             AppError::Platform(err) => write!(f, "Erreur de la plateforme UI : {}", err),
             AppError::Seeding(msg) => write!(f, "Erreur de seeding : {}", msg),
             AppError::Authentication(msg) => write!(f, "Erreur d'authentification : {}", msg),
+            AppError::ValidationError(e) => write!(f, "Erreur de validation: {}", e),
+            AppError::Unauthorized(msg) => write!(f, "Erreur d'autorisation : {}", msg),
             AppError::Io(err) => write!(f, "Erreur d'entrée/sortie : {}", err),
             AppError::Generic(msg) => write!(f, "Erreur : {}", msg),
         }
@@ -55,7 +63,11 @@ impl StdError for AppError {
             AppError::Database(err) => Some(err.as_ref()),
             AppError::Platform(err) => Some(err),
             AppError::Io(err) => Some(err),
-            AppError::Seeding(_) | AppError::Authentication(_) | AppError::Generic(_) => None,
+            AppError::Seeding(_)
+            | AppError::Authentication(_)
+            | AppError::Unauthorized(_)
+            | AppError::Generic(_) => None,
+            AppError::ValidationError(_) => None,
         }
     }
 }

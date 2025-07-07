@@ -1,37 +1,502 @@
-import { VerticalBox } from "std-widgets.slint";
+import { Button, LineEdit, ComboBox, ScrollView } from "std-widgets.slint";
+import { SaleUI } from "../components/models.slint";
 
-export component SalesView {
-    VerticalBox {
-        spacing: 25px;
-        alignment: center;
+export component SalesView inherits VerticalLayout {
+    in property <bool> is_admin;
+    in property <[SaleUI]> sales_model;
+    in property <int> current_page: 1;
+    in property <int> total_pages: 1;
+    in property <int> total_sales: 0;
+    in property <int> sales_per_page: 5;
+    in property <string> search_query: "";
+    in property <string> date_filter: "all";
+    in property <string> sort_by: "date";
+    in property <string> sort_order: "desc";
+    
+    callback request_sales();
+    callback add_sale_clicked();
+    callback view_sale_details(string);
+    callback search_sales(string);
+    callback filter_sales(string);
+    callback sort_sales(string, string);
+    callback change_page(int);
+    callback change_page_size(int);
+
+    padding: 25px;
+    spacing: 15px;
+
+    // En-tête avec titre et actions
+    HorizontalLayout {
+        spacing: 15px;
+        alignment: stretch;
         
-        Text {
-            text: "Module Ventes";
-            font-size: 28px;
-            font-weight: 700;
+        Text { 
+            text: "Historique des Ventes"; 
+            font-size: 28px; 
+            font-weight: 700; 
             color: white;
+            vertical-alignment: center;
         }
         
-        Rectangle {
-            width: 400px;
-            height: 200px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+        Rectangle { 
+            // Spacer pour pousser les boutons à droite
+        }
+        
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: end;
             
-            VerticalBox {
-                alignment: center;
+            Button { 
+                text: "➕ Nouvelle Vente";
+                height: 40px; 
+                min-width: 150px;
+                primary: true;
+                clicked => { root.add_sale_clicked(); } 
+            }
+            
+            Button { 
+                text: "🔄 Rafraîchir";
+                height: 40px; 
+                min-width: 120px; 
+                clicked => { root.request_sales(); } 
+            }
+        }
+    }
+
+    // Barre de recherche et filtres
+    Rectangle {
+        height: 60px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        
+        HorizontalLayout {
+            padding: 15px;
+            spacing: 15px;
+            alignment: space-around;
+            
+            // Recherche
+            Rectangle {
+                width: 300px;
+                height: 35px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: rgba(255, 255, 255, 0.2);
+                
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 8px;
+                    alignment: center;
+                    
+                    Text {
+                        text: "🔍";
+                        color: rgba(255, 255, 255, 0.6);
+                        vertical-alignment: center;
+                    }
+                    
+                    search_input := LineEdit {
+                        placeholder-text: "Rechercher une vente...";
+                        text: root.search_query;
+                        font-size: 14px;
+                        edited => {
+                            root.search_sales(self.text);
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
                 spacing: 15px;
+                // Filtre par date
+                Rectangle {
+                    width: 150px;
+                    
+                    VerticalLayout {
+                        spacing: 2px;
+                        
+                        Text {
+                            text: "Période";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
+                        }
+                        
+                        date_filter_combo := ComboBox {
+                            model: ["Toutes", "Aujourd'hui", "Cette semaine", "Ce mois"];
+                            current-value: root.date_filter == "all" ? "Toutes" : 
+                                        root.date_filter == "today" ? "Aujourd'hui" :
+                                        root.date_filter == "week" ? "Cette semaine" : "Ce mois";
+                            selected => {
+                                root.filter_sales(
+                                    self.current-value == "Toutes" ? "all" :
+                                    self.current-value == "Aujourd'hui" ? "today" :
+                                    self.current-value == "Cette semaine" ? "week" : "month"
+                                );
+                            }
+                        }
+                    }
+                }
+                
+                // Tri
+                Rectangle {
+                    width: 150px;
+                    VerticalLayout {
+                        spacing: 2px;
+                        Text {
+                            text: "Trier par";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
+                        }
+                        sort_combo := ComboBox {
+                            model: ["Date ↓", "Date ↑", "Montant ↓", "Montant ↑"];
+                            current-value: 
+                                root.sort_by == "date" && root.sort_order == "desc" ? "Date ↓" :
+                                root.sort_by == "date" && root.sort_order == "asc" ? "Date ↑" :
+                                root.sort_by == "amount" && root.sort_order == "desc" ? "Montant ↓" : "Montant ↑";
+                            selected => {
+                                if (self.current-value == "Date ↓") { root.sort_sales("date", "desc"); }
+                                else if (self.current-value == "Date ↑") { root.sort_sales("date", "asc"); }
+                                else if (self.current-value == "Montant ↓") { root.sort_sales("amount", "desc"); }
+                                else if (self.current-value == "Montant ↑") { root.sort_sales("amount", "asc"); }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    // Spacer
+                }
+                
+                // Éléments par page
+                Rectangle {
+                    width: 120px;
+                    
+                    VerticalLayout {
+                        spacing: 2px;
+                        
+                        Text {
+                            text: "Par page";
+                            font-size: 12px;
+                            color: rgba(255, 255, 255, 0.7);
+                        }
+                        
+                        page_size_combo := ComboBox {
+                            model: ["5", "10", "20", "30"];
+                            current-value: root.sales_per_page == 5 ? "5" :
+                                          root.sales_per_page == 10 ? "10" :
+                                          root.sales_per_page == 20 ? "20" : "30";
+                            selected => {
+                                if (self.current-value == "5") { root.change_page_size(5); }
+                                else if (self.current-value == "10") { root.change_page_size(10); }
+                                else if (self.current-value == "20") { root.change_page_size(20); }
+                                else if (self.current-value == "30") { root.change_page_size(30); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Information sur les résultats et pagination
+    HorizontalLayout {
+        spacing: 15px;
+        alignment: stretch;
+        
+        Text {
+            text: root.total_sales > 0 ? 
+                "Affichage de " + ((root.current_page - 1) * root.sales_per_page + 1) + 
+                " à " + min(root.current_page * root.sales_per_page, root.total_sales) + 
+                " sur " + root.total_sales + " ventes" : "";
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+        
+        if root.total_sales > 0 : Rectangle {
+            // Spacer
+        }
+        
+        // Contrôles de pagination
+        if root.total_pages > 1 : HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+            
+            Button {
+                text: "◀ Précédent";
+                enabled: root.current_page > 1;
+                height: 32px;
+                min-width: 80px;
+                clicked => {
+                    root.change_page(root.current_page - 1);
+                }
+            }
+            
+            Rectangle {
+                width: 100px;
+                height: 32px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
                 
                 Text {
-                    text: "🚧";
+                    text: root.current_page + " / " + root.total_pages;
+                    color: white;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    font-size: 14px;
+                }
+            }
+            
+            Button {
+                text: "Suivant ▶";
+                enabled: root.current_page < root.total_pages;
+                height: 32px;
+                min-width: 80px;
+                clicked => {
+                    root.change_page(root.current_page + 1);
+                }
+            }
+        }
+    }
+
+    // Conteneur principal de la liste
+    Rectangle {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        clip: true;
+
+        // Message si pas de données
+        if root.sales_model.length == 0 : Rectangle {
+            height: 200px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            
+            VerticalLayout {
+                alignment: center;
+                spacing: 10px;
+                
+                Text {
+                    text: "📊";
                     font-size: 48px;
+                    horizontal-alignment: center;
                 }
                 
                 Text {
-                    text: "Module en développement";
-                    font-size: 18px;
-                    font-weight: 600;
-                    color: white;
+                    text: root.search_query != "" || root.date_filter != "all" ? 
+                         "Aucune vente ne correspond à vos critères" :
+                         "Aucune vente trouvée.\nCliquez sur 'Rafraîchir' pour charger les données.";
+                    font-size: 16px;
+                    color: rgba(255, 255, 255, 0.7);
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                
+                if root.search_query != "" || root.date_filter != "all" : Button {
+                    text: "Effacer les filtres";
+                    height: 36px;
+                    clicked => {
+                        search_input.text = "";
+                        root.search_sales("");
+                        root.filter_sales("all");
+                    }
+                }
+            }
+        }
+
+        // Liste des ventes
+        if root.sales_model.length > 0 : Rectangle {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            clip: true;
+            ScrollView {
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 2px;
+                    width: 100%;
+
+                    // En-tête du tableau
+                    Rectangle {
+                        height: 45px;
+                        background: rgba(255, 255, 255, 0.15);
+                        border-radius: 8px;
+                        width: 100%;
+                        
+                        HorizontalLayout {
+                            padding-left: 15px;
+                            padding-right: 15px;
+                            spacing: 10px;
+                            
+                            Rectangle {
+                                horizontal-stretch: 3;
+                                min-width: 150px;
+                                Text { 
+                                    text: "N° Vente"; 
+                                    font-weight: 700; 
+                                    color: white; 
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 4;
+                                min-width: 200px;
+                                Text { 
+                                    text: "Date"; 
+                                    font-weight: 700; 
+                                    color: white; 
+                                    horizontal-alignment: center; 
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 3;
+                                min-width: 150px;
+                                Text { 
+                                    text: "Montant"; 
+                                    font-weight: 700; 
+                                    color: white; 
+                                    horizontal-alignment: center; 
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 2;
+                                min-width: 100px;
+                                Text { 
+                                    text: "Articles"; 
+                                    font-weight: 700; 
+                                    color: white; 
+                                    horizontal-alignment: center; 
+                                    vertical-alignment: center;
+                                }
+                            }
+                            Rectangle {
+                                horizontal-stretch: 2;
+                                min-width: 100px;
+                                Text { 
+                                    text: "Actions"; 
+                                    font-weight: 700; 
+                                    color: white; 
+                                    horizontal-alignment: center; 
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    // Lignes de données
+                    for sale[index] in root.sales_model : Rectangle {
+                        height: 60px;
+                        background: mod(index, 2) == 0 ? rgba(255, 255, 255, 0.08) : rgba(255, 255, 255, 0.03);
+                        border-radius: 8px;
+                        width: 100%;
+                        
+                        // Effet hover
+                        touch-area := TouchArea {
+                            Rectangle {
+                                background: touch-area.has-hover ? rgba(255, 255, 255, 0.15) : transparent;
+                                border-radius: 8px;
+                            }
+                        }
+                        
+                        VerticalLayout {
+                            spacing: 5px;
+                            padding: 10px;
+
+                            // Ligne principale
+                            HorizontalLayout {
+                                spacing: 10px;
+                                padding-left: 15px;
+                                padding-right: 15px;
+                                
+                                Rectangle {
+                                    horizontal-stretch: 3;
+                                    min-width: 150px;
+                                    Text { 
+                                        text: sale.sale_number; 
+                                        color: white; 
+                                        vertical-alignment: center;
+                                    }
+                                }
+                                Rectangle {
+                                    horizontal-stretch: 4;
+                                    min-width: 200px;
+                                    Text { 
+                                        text: sale.date; 
+                                        color: white; 
+                                        horizontal-alignment: center; 
+                                        vertical-alignment: center;
+                                    }
+                                }
+                                Rectangle {
+                                    horizontal-stretch: 3;
+                                    min-width: 150px;
+                                    Text { 
+                                        text: sale.total_amount; 
+                                        color: #2ed573;
+                                        horizontal-alignment: center; 
+                                        vertical-alignment: center;
+                                        font-weight: 700; 
+                                    }
+                                }
+                                Rectangle {
+                                    horizontal-stretch: 2;
+                                    min-width: 100px;
+                                    Text { 
+                                        text: sale.items_count + " art."; 
+                                        color: white;
+                                        horizontal-alignment: center; 
+                                        vertical-alignment: center;
+                                    }
+                                }
+                                if root.is_admin : Rectangle {
+                                    horizontal-stretch: 2;
+                                    min-width: 100px;
+                                    
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        alignment: center;
+                                        
+                                        Button {
+                                            text: "Détails";
+                                            width: 80px;
+                                            clicked => { root.view_sale_details(sale.id); }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Détails des articles 
+                            if sale.show_details : Rectangle {
+                                background: rgba(0, 0, 0, 0.1);
+                                border-radius: 5px;
+                                VerticalLayout {
+                                    spacing: 5px;
+                                    padding: 10px;
+                                    
+                                    for item in sale.items : HorizontalLayout {
+                                        spacing: 15px;
+                                        
+                                        Text {
+                                            text: "• " + item.product_name;
+                                            width: 40%;
+                                            color: #BDBDBD;
+                                        }
+                                        Text {
+                                            text: item.quantity + " x " + item.unit_price;
+                                            width: 30%;
+                                            color: #BDBDBD;
+                                        }
+                                        Text {
+                                            text: "= " + item.total_price;
+                                            width: 30%;
+                                            horizontal-alignment: right;
+                                            color: #BDBDBD;
+                                        }
+                                    }
+                                }
+                        }
+                        }
+                    }
                 }
             }
         }

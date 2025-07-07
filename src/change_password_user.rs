@@ -1,14 +1,10 @@
 // src/change_password_user.rs
 
 use crate::{error::AppResult, queries, ui::ChangePasswordUserWindow};
-// On n'a pas besoin de `ComponentHandle` ici, car on utilise la fenêtre directement.
 use slint::ComponentHandle;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use uuid::Uuid;
-
-// Assurez-vous d'avoir une requête `get_user_by_id` dans `queries.rs`
-// et une fenêtre `ChangePasswordUserWindow` dans votre UI.
 
 pub fn show(user_id: Uuid) -> AppResult<bool> {
     log::info!(
@@ -27,13 +23,9 @@ pub fn show(user_id: Uuid) -> AppResult<bool> {
             ui.set_status_text("Vérification...".into());
             let password_changed_clone_inner = password_changed_clone.clone();
 
-            // --- CORRECTION APPLIQUÉE ICI ---
-            // On clone la référence faible AVANT de la déplacer dans le thread.
             let thread_ui_handle = ui_handle.clone();
 
             thread::spawn(move || {
-                // On utilise le clone `thread_ui_handle` pour le reste du thread.
-
                 // Vérification de l'ancien mot de passe
                 let user_check_result = match queries::get_user_by_id(user_id) {
                     Ok(user) => match bcrypt::verify(&old_password, &user.password) {

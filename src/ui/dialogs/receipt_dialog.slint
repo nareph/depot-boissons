@@ -1,0 +1,203 @@
+import { Button } from "std-widgets.slint";
+import { ReceiptItemUI } from "../components/models.slint";
+
+export component ReceiptDialog inherits Dialog {
+    in property <string> sale_number;
+    in property <string> date;
+    in property <[ReceiptItemUI]> items;
+    in property <string> total_amount;
+    in property <string> seller_name;
+    
+    callback print_clicked();
+    callback close_clicked();
+    
+    width: 400px;
+    height: 600px;
+    title: "Ticket de caisse";
+    background: white;
+
+    VerticalLayout {
+        padding: 25px;
+        spacing: 10px;
+        
+        // En-tête du magasin
+        Text {
+            text: "DÉPÔT DE BOISSONS";
+            font-size: 18px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+        
+        Text {
+            text: "Yaoundé";
+            font-size: 12px;
+            horizontal-alignment: center;
+        }
+        
+        Text {
+            text: "Tél: +237 674 XX XX XX";
+            font-size: 12px;
+            horizontal-alignment: center;
+        }
+        
+        // Ligne séparatrice
+        Rectangle {
+            height: 1px;
+            background: #000;
+            //margin-top: 10px;
+            //margin-bottom: 10px;
+        }
+        
+        // Info vente
+        HorizontalLayout {
+            spacing: 5px;
+            Text {
+                text: "Vente N°:";
+                font-weight: 700;
+            }
+            Text {
+                text: root.sale_number;
+            }
+        }
+        
+        HorizontalLayout {
+            spacing: 5px;
+            Text {
+                text: "Date:";
+                font-weight: 700;
+            }
+            Text {
+                text: root.date;
+            }
+        }
+        
+        // HorizontalLayout {
+        //     spacing: 5px;
+        //     Text {
+        //         text: "Vendeur:";
+        //         font-weight: 700;
+        //     }
+        //     Text {
+        //         text: root.seller_name;
+        //     }
+        // }
+        
+        // Ligne séparatrice
+        Rectangle {
+            height: 1px;
+            background: #000;
+            //margin-top: 10px;
+            //margin-bottom: 10px;
+        }
+        
+        // Liste des articles
+        VerticalLayout {
+            spacing: 5px;
+            
+            // En-tête
+            HorizontalLayout {
+                Text {
+                    text: "Article";
+                    font-weight: 700;
+                    width: 60%;
+                }
+                Text {
+                    text: "Qty";
+                    font-weight: 700;
+                    width: 15%;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Total";
+                    font-weight: 700;
+                    width: 25%;
+                    horizontal-alignment: right;
+                }
+            }
+            
+            // Articles
+            for item in root.items : VerticalLayout {
+                spacing: 2px;
+                
+                HorizontalLayout {
+                    Text {
+                        text: item.product_name;
+                        width: 60%;
+                        wrap: word-wrap;
+                    }
+                    Text {
+                        text: item.quantity;
+                        width: 15%;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: item.total_price;
+                        width: 25%;
+                        horizontal-alignment: right;
+                    }
+                }
+                
+                HorizontalLayout {
+                    Rectangle { width: 60%; } // Alignement
+                    Text {
+                        text: "@ " + item.unit_price + " l'unité";
+                        font-size: 10px;
+                        color: #666;
+                        width: 40%;
+                    }
+                }
+            }
+        }
+        
+        // Ligne séparatrice
+        Rectangle {
+            height: 1px;
+            background: #000;
+            //margin-top: 15px;
+            //margin-bottom: 5px;
+        }
+        
+        // Total
+        HorizontalLayout {
+            Text {
+                text: "TOTAL:";
+                font-size: 16px;
+                font-weight: 700;
+            }
+            Rectangle { } // Spacer
+            Text {
+                text: root.total_amount;
+                font-size: 16px;
+                font-weight: 700;
+            }
+        }
+        
+        // Message de remerciement
+        Text {
+            text: "Merci pour votre achat !";
+            font-size: 14px;
+            font-weight: 500;
+            horizontal-alignment: center;
+            //margin-top: 15px;
+        }
+        
+        // Boutons
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: end;
+            //margin-top: 20px;
+            
+            Button {
+                text: "Imprimer";
+                width: 100px;
+                clicked => { root.print_clicked(); }
+            }
+            
+            Button {
+                text: "Fermer";
+                width: 100px;
+                clicked => { root.close_clicked(); }
+            }
+        }
+    }
+}

@@ -1,11 +1,13 @@
--- up.sql (Version Corrigée et Simplifiée)
-
--- Créer la fonction de trigger pour 'updated_at' (ne change pas)
+-- up.sql 
+-- Créer une fonction pour mettre à jour automatiquement le champ 'updated_at'
 CREATE OR REPLACE FUNCTION trigger_set_timestamp() RETURNS TRIGGER AS $$
-BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
 $$ LANGUAGE plpgsql;
 
--- Table des utilisateurs (ne change pas, sauf si vous retirez l'email)
+-- Table des utilisateurs
 CREATE TABLE users (
     id UUID PRIMARY KEY,
     password TEXT NOT NULL,
@@ -17,8 +19,7 @@ CREATE TABLE users (
 );
 CREATE TRIGGER set_timestamp BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
 
--- *** LA NOUVELLE TABLE PRODUCTS ***
--- Chaque ligne est un produit fini (SKU)
+-- Table des produits finis (SKU)
 CREATE TABLE products (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL, -- ex: "Isenbeck", "Supermont"
@@ -33,9 +34,10 @@ CREATE TABLE products (
 );
 CREATE TRIGGER set_timestamp BEFORE UPDATE ON products FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
 
--- Table des ventes (l'en-tête de la facture, ne change pas)
+-- Table des ventes (l'en-tête de la facture)
 CREATE TABLE sales (
     id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT, -- L'utilisateur qui a créé la vente
     sale_number TEXT NOT NULL UNIQUE,
     total_amount NUMERIC(10, 2) NOT NULL,
     date TIMESTAMPTZ NOT NULL,
@@ -43,8 +45,10 @@ CREATE TABLE sales (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TRIGGER set_timestamp BEFORE UPDATE ON sales FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+-- Index pour accélérer la recherche des ventes par utilisateur
+CREATE INDEX idx_sales_user_id ON sales (user_id); 
 
--- Table des articles de vente (simplifiée)
+-- Table des articles de vente 
 CREATE TABLE sale_items (
     id UUID PRIMARY KEY,
     sale_id UUID NOT NULL REFERENCES sales(id) ON DELETE CASCADE,

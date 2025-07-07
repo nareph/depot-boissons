@@ -16,7 +16,7 @@ use super::SortOrder;
 pub struct ProductSearchParams {
     pub search_query: Option<String>,
     pub stock_filter: StockFilter,
-    pub sort_by: SortField,
+    pub sort_by: SortFieldProduct,
     pub sort_order: SortOrder,
     pub page: i64,
     pub page_size: i64,
@@ -30,7 +30,7 @@ pub enum StockFilter {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum SortField {
+pub enum SortFieldProduct {
     Name,
     Stock,
     Price,
@@ -51,7 +51,7 @@ impl Default for ProductSearchParams {
         Self {
             search_query: None,
             stock_filter: StockFilter::All,
-            sort_by: SortField::Name,
+            sort_by: SortFieldProduct::Name,
             sort_order: SortOrder::Asc,
             page: 1,
             page_size: 10,
@@ -74,7 +74,7 @@ impl ProductSearchParams {
         self
     }
 
-    pub fn with_sort(mut self, field: SortField, order: SortOrder) -> Self {
+    pub fn with_sort(mut self, field: SortFieldProduct, order: SortOrder) -> Self {
         self.sort_by = field;
         self.sort_order = order;
         self
@@ -132,22 +132,26 @@ pub fn get_products_paginated(params: ProductSearchParams) -> AppResult<Paginate
         StockFilter::OutOfStock => data_query = data_query.filter(stock_in_sale_units.le(0)),
     }
     match (params.sort_by, params.sort_order) {
-        (SortField::Name, SortOrder::Asc) => data_query = data_query.order(name.asc()),
-        (SortField::Name, SortOrder::Desc) => data_query = data_query.order(name.desc()),
-        (SortField::Stock, SortOrder::Asc) => {
+        (SortFieldProduct::Name, SortOrder::Asc) => data_query = data_query.order(name.asc()),
+        (SortFieldProduct::Name, SortOrder::Desc) => data_query = data_query.order(name.desc()),
+        (SortFieldProduct::Stock, SortOrder::Asc) => {
             data_query = data_query.order(stock_in_sale_units.asc())
         }
-        (SortField::Stock, SortOrder::Desc) => {
+        (SortFieldProduct::Stock, SortOrder::Desc) => {
             data_query = data_query.order(stock_in_sale_units.desc())
         }
-        (SortField::Price, SortOrder::Asc) => {
+        (SortFieldProduct::Price, SortOrder::Asc) => {
             data_query = data_query.order(price_per_sale_unit.asc())
         }
-        (SortField::Price, SortOrder::Desc) => {
+        (SortFieldProduct::Price, SortOrder::Desc) => {
             data_query = data_query.order(price_per_sale_unit.desc())
         }
-        (SortField::CreatedAt, SortOrder::Asc) => data_query = data_query.order(created_at.asc()),
-        (SortField::CreatedAt, SortOrder::Desc) => data_query = data_query.order(created_at.desc()),
+        (SortFieldProduct::CreatedAt, SortOrder::Asc) => {
+            data_query = data_query.order(created_at.asc())
+        }
+        (SortFieldProduct::CreatedAt, SortOrder::Desc) => {
+            data_query = data_query.order(created_at.desc())
+        }
     }
 
     // Application de la pagination
@@ -268,4 +272,35 @@ pub fn can_delete_product(p_id: Uuid) -> AppResult<bool> {
         .get_result::<i64>(&mut conn)?;
 
     Ok(sales_count == 0)
+}
+
+pub fn get_available_products() -> AppResult<Vec<Product>> {
+    use crate::db;
+    use crate::schema::products;
+    use diesel::prelude::*;
+
+    let mut conn = db::get_conn()?;
+
+    products::table
+        .filter(products::stock_in_sale_units.gt(0)) // Seulement les produits en stock
+        .order(products::name.asc())
+        .load::<Product>(&mut conn)
+        .map_err(Into::into)
+}
+
+/// Fonction pour récupérer les détails d'un produit spécifique
+pub fn get_product_details(product_id_str: &str) -> AppResult<Product> {
+    use crate::db;
+    use crate::schema::products;
+    use diesel::prelude::*;
+
+    let mut conn = db::get_conn()?;
+    let product_id = Uuid::parse_str(product_id_str).map_err(|_| {
+        crate::error::AppError::ValidationError("ID de produit invalide".to_string())
+    })?;
+
+    products::table
+        .find(product_id)
+        .first::<Product>(&mut conn)
+        .map_err(Into::into)
 }

@@ -4,7 +4,6 @@ import { LineEdit, StandardButton, VerticalBox, ComboBox } from "std-widgets.sli
 
 export component AddUserDialog inherits Dialog {
     callback save_clicked(string, string, string); // name, password, role
-    callback cancelled();
 
     in-out property <string> status_message;
     in-out property <int> selected_role_index: 0;
@@ -57,7 +56,7 @@ export component AddUserDialog inherits Dialog {
         }
     }
     
-    StandardButton { kind: cancel; clicked => { root.cancelled();}}
+    StandardButton { kind: cancel; }
     
     StandardButton { 
         kind: ok;

@@ -3,6 +3,7 @@
 // Déclarer les sous-modules
 mod dashboard_callbacks;
 mod product_callbacks;
+mod sale_callbacks;
 mod user_callbacks;
 
 use crate::error::AppResult;
@@ -57,7 +58,7 @@ pub fn run(user: &User) -> AppResult<WindowCloseReason> {
 
 fn setup_callbacks(
     main_window: &ui::MainWindow,
-    user: &User, // Keep this as a reference
+    user: &User, 
     logout_flag: std::rc::Rc<std::cell::RefCell<bool>>,
 ) {
     let main_window_handle = main_window.as_weak();
@@ -86,6 +87,7 @@ fn setup_callbacks(
     // Déléguer aux modules spécialisés
     dashboard_callbacks::setup(&main_window_handle);
     product_callbacks::setup(&main_window_handle);
+    sale_callbacks::setup(&main_window.as_weak(), user.id, user.role == "Admin");
 
     if user.role == "Admin" {
         user_callbacks::setup(&main_window_handle, user.id);

@@ -29,6 +29,7 @@ diesel::table! {
 diesel::table! {
     sales (id) {
         id -> Uuid,
+        user_id -> Uuid,
         sale_number -> Text,
         total_amount -> Numeric,
         date -> Timestamptz,
@@ -51,6 +52,7 @@ diesel::table! {
 
 diesel::joinable!(sale_items -> products (product_id));
 diesel::joinable!(sale_items -> sales (sale_id));
+diesel::joinable!(sales -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     products,

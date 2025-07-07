@@ -5,9 +5,6 @@ import { StandardButton, VerticalBox } from "std-widgets.slint";
 export component ConfirmDialog inherits Dialog {
     in property <string> dialog_title: "Confirmation";
     in property <string> message: "Êtes-vous sûr ?";
-    
-    callback confirmed();
-    callback cancelled();
 
     title: root.dialog_title;
     width: 400px;
@@ -32,11 +29,9 @@ export component ConfirmDialog inherits Dialog {
     
     StandardButton { 
         kind: cancel;   
-        clicked => { root.cancelled(); }
 } 
     
     StandardButton { 
         kind: ok; 
-        clicked => { root.confirmed(); }
     } 
 }

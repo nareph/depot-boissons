@@ -2,14 +2,12 @@
 import { StandardButton, VerticalBox } from "std-widgets.slint";
 
 export component DeleteProductDialog inherits Dialog {
-    callback confirmed();
-    callback cancelled();
-    
+
     in-out property <string> product_name;
     
     title: "Confirmer la Suppression";
     width: 350px;
-    height: 200px;
+    height: 220px;
     
     // UN SEUL élément non-bouton autorisé
     VerticalBox {
@@ -42,11 +40,9 @@ export component DeleteProductDialog inherits Dialog {
     // Boutons StandardButton
     StandardButton { 
         kind: cancel; 
-        clicked => { root.cancelled(); }
     }
     
     StandardButton { 
         kind: ok; 
-        clicked => { root.confirmed(); }
     }
 }

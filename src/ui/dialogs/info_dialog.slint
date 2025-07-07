@@ -1,11 +1,9 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, StandardButton } from "std-widgets.slint";
 
 export component InfoDialog inherits Dialog {
     in-out property <string> dialog_title: "Information";
     in-out property <string> message: "";
-    
-    callback ok_clicked();
-    
+        
     title: root.dialog_title;
     width: 450px;
     height: 280px;
@@ -68,22 +66,13 @@ export component InfoDialog inherits Dialog {
             }
         }
         
-        // Zone de boutons avec hauteur fixe
-        HorizontalBox {
-            alignment: end;
-            spacing: 10px;
-            height: 45px;
-            
-            Button {
-                text: "OK";
-                primary: true;
-                min-width: 100px;
-                height: 35px;
-                
-                clicked => {
-                    root.ok_clicked();
-                }
-            }
-        }
+    }
+
+    StandardButton { 
+        kind: ok; 
+        primary: true;
+        min-width: 100px;
+        height: 35px;
+
     }
 }
