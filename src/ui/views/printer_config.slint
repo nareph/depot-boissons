@@ -1,0 +1,801 @@
+// src/ui/views/printer_config.slint
+import { Button, LineEdit, ComboBox, ScrollView, CheckBox } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
+
+export struct PrinterUI {
+    name: string,
+    port: string,
+    printer_type: string,
+    paper_width: string,
+    is_default: bool,
+}
+
+export struct PrinterErrorUI {
+    has_error: bool,
+    message: string,
+    icon: string,
+    color: string,
+    error_type: string,
+}
+
+export struct PrinterSuccessUI {
+    has_success: bool,
+    message: string,
+    icon: string,
+}
+
+export struct PrinterTestResultUI {
+    is_testing: bool,
+    has_result: bool,
+    success: bool,
+    message: string,
+    printer_name: string,
+}
+
+export component PrinterConfigOverlay inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    
+    in-out property <[PrinterUI]> printers;
+    in-out property <PrinterErrorUI> current_error: { has_error: false, message: "", icon: "", color: "", error_type: "" };
+    in-out property <PrinterSuccessUI> current_success: { has_success: false, message: "", icon: "" };
+    in-out property <PrinterTestResultUI> test_result: { is_testing: false, has_result: false, success: false, message: "", printer_name: "" };
+    in-out property <[string]> port_suggestions: [];
+    in-out property <string> help_message: "";
+    in-out property <bool> is_adding_printer: false;
+    
+    callback test_printer(string);
+    callback set_default_printer(string);
+    callback add_printer(PrinterUI);
+    callback remove_printer(string);
+    callback close_dialog();
+    callback clear_notifications();
+    callback get_port_suggestions(string);
+    callback get_help_message(string);
+    
+    // Fond sombre
+    background: AppTheme.with-alpha(#000000, 0.5);
+    animate background { duration: AppStyles.animation-duration; easing: AppStyles.animation-ease; }
+    
+    TouchArea {
+        clicked => { root.close_dialog(); }
+    }
+    
+    // Conteneur principal 
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 1100px;
+        height: 800px;
+        background: AppStyles.container-main;
+        border-radius: AppStyles.border-radius;
+        drop-shadow-blur: AppStyles.shadow-blur;
+        drop-shadow-color: AppTheme.shadow-dark;
+        
+        animate y { duration: AppStyles.animation-duration; easing: AppStyles.animation-ease; }
+        animate opacity { duration: AppStyles.animation-duration; easing: AppStyles.animation-ease; }
+        
+        TouchArea { }
+        
+        // Conteneur interne 
+        Rectangle {
+            width: 100%;
+            height: 100%;
+            background: AppTheme.background-overlay-light;
+            border-radius: AppStyles.border-radius;
+            
+            VerticalBox {
+                padding: 30px;
+                spacing: 20px;
+                
+                // Header avec notifications
+                VerticalBox {
+                    spacing: 15px;
+                    
+                    // Titre principal
+                    HorizontalBox {
+                        spacing: 20px;
+                        alignment: stretch;
+                        
+                        Text {
+                            text: "🖨️ Configuration des Imprimantes";
+                            font-size: 28px;
+                            font-weight: 700;
+                            color: AppTheme.text-primary;
+                            vertical-alignment: center;
+                        }
+                        
+                        Rectangle { }
+                        
+                        Rectangle {
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 20px;
+                            background: AppTheme.background-overlay-medium;
+                            
+                            Button {
+                                text: "✕";
+                                width: 100%;
+                                height: 100%;
+                                clicked => { root.close_dialog(); }
+                            }
+                        }
+                    }
+                    
+                    // Zone de notifications d'erreur
+                    if root.current_error.has_error : Rectangle {
+                        height: 60px;
+                        background: AppTheme.message-error-bg;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: AppTheme.message-error-border;
+                        
+                        HorizontalBox {
+                            padding: 15px;
+                            spacing: 12px;
+                            alignment: center;
+                            
+                            Text {
+                                text: root.current_error.icon;
+                                font-size: 24px;
+                                vertical-alignment: center;
+                            }
+                            
+                            VerticalBox {
+                                spacing: 2px;
+                                
+                                Text {
+                                    text: root.current_error.error_type;
+                                    font-size: 14px;
+                                    font-weight: 700;
+                                    color: AppTheme.message-error-text;
+                                }
+                                
+                                Text {
+                                    text: root.current_error.message;
+                                    font-size: 13px;
+                                    color: AppTheme.message-error-text;
+                                    wrap: word-wrap;
+                                }
+                            }
+                            
+                            Rectangle { }
+                            
+                            Rectangle {
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 14px;
+                                background: AppTheme.with-alpha(AppTheme.message-error-border, 0.2);
+                                
+                                Button {
+                                    text: "✕";
+                                    width: 100%;
+                                    height: 100%;
+                                    clicked => { root.clear_notifications(); }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Zone de notifications de succès
+                    if root.current_success.has_success : Rectangle {
+                        height: 50px;
+                        background: AppTheme.message-success-bg;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: AppTheme.message-success-border;
+                        
+                        HorizontalBox {
+                            padding: 15px;
+                            spacing: 12px;
+                            alignment: center;
+                            
+                            Text {
+                                text: root.current_success.icon;
+                                font-size: 20px;
+                                vertical-alignment: center;
+                            }
+                            
+                            Text {
+                                text: root.current_success.message;
+                                font-size: 14px;
+                                font-weight: 600;
+                                color: AppTheme.message-success-text;
+                            }
+                            
+                            Rectangle { }
+                            
+                            Rectangle {
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 14px;
+                                background: AppTheme.with-alpha(AppTheme.message-success-border, 0.2);
+                                
+                                Button {
+                                    text: "✕";
+                                    width: 100%;
+                                    height: 100%;
+                                    clicked => { root.clear_notifications(); }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Zone de résultat de test 
+                    if root.test_result.has_result : Rectangle {
+                        height: 55px;
+                        background: root.test_result.success ? AppTheme.message-success-bg : AppTheme.message-error-bg;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: root.test_result.success ? AppTheme.message-success-border : AppTheme.message-error-border;
+                        
+                        HorizontalBox {
+                            padding: 15px;
+                            spacing: 12px;
+                            alignment: center;
+                            
+                            Text {
+                                text: root.test_result.success ? "✅" : "❌";
+                                font-size: 20px;
+                                vertical-alignment: center;
+                            }
+                            
+                            VerticalBox {
+                                spacing: 2px;
+                                
+                                Text {
+                                    text: "Test de " + root.test_result.printer_name;
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    color: root.test_result.success ? AppTheme.message-success-text : AppTheme.message-error-text;
+                                }
+                                
+                                Text {
+                                    text: root.test_result.message;
+                                    font-size: 12px;
+                                    color: root.test_result.success ? AppTheme.message-success-text : AppTheme.message-error-text;
+                                    wrap: word-wrap;
+                                }
+                            }
+                            
+                            Rectangle { }
+                            
+                            Rectangle {
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 14px;
+                                background: AppTheme.with-alpha(root.test_result.success ? AppTheme.message-success-border : AppTheme.message-error-border, 0.2);
+                                
+                                Button {
+                                    text: "✕";
+                                    width: 100%;
+                                    height: 100%;
+                                    clicked => { 
+                                        // Réinitialiser complètement l'état
+                                        root.test_result.has_result = false;
+                                        root.test_result.is_testing = false;
+                                        root.test_result.success = false;
+                                        root.test_result.message = "";
+                                        root.test_result.printer_name = "";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Indicateur de test en cours 
+                    if root.test_result.is_testing && !root.test_result.has_result : Rectangle {
+                        height: 50px;
+                        background: AppTheme.message-info-bg;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: AppTheme.message-info-border;
+                        
+                        HorizontalBox {
+                            padding: 15px;
+                            spacing: 12px;
+                            alignment: center;
+                            
+                            Text {
+                                text: "⏳";
+                                font-size: 20px;
+                                vertical-alignment: center;
+                                color: AppTheme.message-info-text;
+                            }
+                            
+                            Text {
+                                text: "Test en cours de " + root.test_result.printer_name + "...";
+                                font-size: 14px;
+                                font-weight: 600;
+                                color: AppTheme.message-info-text;
+                            }
+                            
+                            Rectangle { }
+                        }
+                    }
+                }
+                
+                // Contenu principal 
+                Rectangle {
+                    background: AppTheme.background-overlay-medium;
+                    border-radius: AppStyles.border-radius;
+                    
+                    HorizontalBox {
+                        padding: 25px;
+                        spacing: 25px;
+                        
+                        // Section des imprimantes configurées 
+                        Rectangle {
+                            width: 49%;
+                            background: AppTheme.background-overlay-dark;
+                            border-radius: AppStyles.border-radius;
+                            
+                            VerticalBox {
+                                padding: 20px;
+                                spacing: 15px;
+                                
+                                Text {
+                                    text: "Imprimantes Configurées";
+                                    font-size: 20px;
+                                    font-weight: 600;
+                                    color: AppTheme.text-primary;
+                                }
+                                
+                                if root.printers.length == 0 : Rectangle {
+                                    background: AppTheme.background-content;
+                                    border-radius: 10px;
+                                    border-width: 2px;
+                                    border-color: AppTheme.border-light;
+                                    
+                                    VerticalBox {
+                                        alignment: center;
+                                        spacing: 15px;
+                                        
+                                        Text {
+                                            text: "🖨️";
+                                            font-size: 64px;
+                                            color: AppTheme.text-muted;
+                                            horizontal-alignment: center;
+                                        }
+                                        
+                                        Text {
+                                            text: "Aucune imprimante configurée";
+                                            font-size: 18px;
+                                            color: AppTheme.text-secondary;
+                                            horizontal-alignment: center;
+                                        }
+                                        
+                                        Text {
+                                            text: "Ajoutez votre première imprimante →";
+                                            font-size: 14px;
+                                            color: AppTheme.text-muted;
+                                            horizontal-alignment: center;
+                                        }
+                                    }
+                                }
+                                
+                                if root.printers.length > 0 : ScrollView {
+                                    VerticalBox {
+                                        spacing: 12px;
+                                        
+                                        for printer[index] in root.printers : Rectangle {
+                                            background: mod(index, 2) == 0 ? AppTheme.list-row-even : AppTheme.list-row-odd;
+                                            border-radius: 10px;
+                                            border-width: printer.is_default ? 2px : 1px;
+                                            border-color: printer.is_default ? AppTheme.state-success : AppTheme.border-light;
+                                            
+                                            VerticalBox {
+                                                padding: 18px;
+                                                spacing: 10px;
+                                                
+                                                HorizontalBox {
+                                                    spacing: 12px;
+                                                    alignment: stretch;
+                                                    
+                                                    Text {
+                                                        text: printer.name;
+                                                        font-size: 18px;
+                                                        font-weight: 600;
+                                                        color: AppTheme.text-primary;
+                                                        vertical-alignment: center;
+                                                    }
+                                                    
+                                                    if printer.is_default : Rectangle {
+                                                        width: 90px;
+                                                        height: 28px;
+                                                        background: AppTheme.state-success;
+                                                        border-radius: 14px;
+                                                        
+                                                        Text {
+                                                            text: "✓ Défaut";
+                                                            font-size: 13px;
+                                                            font-weight: 600;
+                                                            color: white;
+                                                            horizontal-alignment: center;
+                                                            vertical-alignment: center;
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                HorizontalBox {
+                                                    spacing: 20px;
+                                                    
+                                                    VerticalBox {
+                                                        spacing: 3px;
+                                                        Text {
+                                                            text: "Type";
+                                                            font-size: 12px;
+                                                            color: AppTheme.text-muted;
+                                                        }
+                                                        Text {
+                                                            text: printer.printer_type;
+                                                            font-size: 14px;
+                                                            font-weight: 500;
+                                                            color: AppTheme.text-secondary;
+                                                        }
+                                                    }
+                                                    
+                                                    VerticalBox {
+                                                        spacing: 3px;
+                                                        Text {
+                                                            text: "Port";
+                                                            font-size: 12px;
+                                                            color: AppTheme.text-muted;
+                                                        }
+                                                        Text {
+                                                            text: printer.port;
+                                                            font-size: 14px;
+                                                            font-weight: 500;
+                                                            color: AppTheme.text-secondary;
+                                                        }
+                                                    }
+                                                    
+                                                    VerticalBox {
+                                                        spacing: 3px;
+                                                        Text {
+                                                            text: "Largeur";
+                                                            font-size: 12px;
+                                                            color: AppTheme.text-muted;
+                                                        }
+                                                        Text {
+                                                            text: printer.paper_width + " car.";
+                                                            font-size: 14px;
+                                                            font-weight: 500;
+                                                            color: AppTheme.text-secondary;
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                HorizontalBox {
+                                                    spacing: 8px;
+                                                    alignment: start;
+                                                    
+                                                    Rectangle {
+                                                        height: 32px;
+                                                        min-width: 75px;
+                                                        background: AppTheme.state-info;
+                                                        border-radius: 6px;
+                                                        
+                                                        Button {
+                                                            text: "🧪 Tester";
+                                                            width: 100%;
+                                                            height: 100%;
+                                                            enabled: !root.test_result.is_testing;
+                                                            clicked => { 
+                                                                root.test_result.is_testing = true;
+                                                                root.test_result.printer_name = printer.name;
+                                                                root.test_printer(printer.name); 
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    if !printer.is_default : Rectangle {
+                                                        height: 32px;
+                                                        min-width: 75px;
+                                                        background: AppTheme.state-success;
+                                                        border-radius: 6px;
+                                                        
+                                                        Button {
+                                                            text: "⭐ Défaut";
+                                                            width: 100%;
+                                                            height: 100%;
+                                                            clicked => { root.set_default_printer(printer.name); }
+                                                        }
+                                                    }
+                                                    
+                                                    Rectangle {
+                                                        height: 32px;
+                                                        min-width: 75px;
+                                                        background: AppTheme.state-warning;
+                                                        border-radius: 6px;
+                                                        
+                                                        Button {
+                                                            text: "🗑️";
+                                                            width: 100%;
+                                                            height: 100%;
+                                                            clicked => { root.remove_printer(printer.name); }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Section d'ajout d'imprimante 
+                        Rectangle {
+                            width: 45%;
+                            background: AppTheme.background-overlay-dark;
+                            border-radius: AppStyles.border-radius;
+                            
+                            VerticalBox {
+                                padding: 20px;
+                                spacing: 15px;
+                                
+                                Text {
+                                    text: "➕ Ajouter une Imprimante";
+                                    font-size: 20px;
+                                    font-weight: 600;
+                                    color: AppTheme.text-primary;
+                                }
+                                
+                                ScrollView {                                    
+                                    VerticalBox {
+                                        spacing: 15px;
+                                        
+                                        VerticalBox {
+                                            spacing: 8px;
+                                            
+                                            Text {
+                                                text: "Nom de l'imprimante";
+                                                font-size: 14px;
+                                                font-weight: 500;
+                                                color: AppTheme.text-secondary;
+                                            }
+                                            
+                                            Rectangle {
+                                                height: 38px;
+                                                background: AppTheme.background-content;
+                                                border-radius: 8px;
+                                                border-width: root.current_error.has_error && root.current_error.error_type == "Nom invalide" ? 2px : 1px;
+                                                border-color: root.current_error.has_error && root.current_error.error_type == "Nom invalide" ? AppTheme.message-error-border : AppTheme.border-light;
+                                                
+                                                name_input := LineEdit {
+                                                    placeholder-text: "Ex: Imprimante Caisse";
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    edited => { root.clear_notifications(); }
+                                                }
+                                            }
+                                        }
+                                        
+                                        VerticalBox {
+                                            spacing: 8px;
+                                            
+                                            Text {
+                                                text: "Type d'imprimante";
+                                                font-size: 14px;
+                                                font-weight: 500;
+                                                color: AppTheme.text-secondary;
+                                            }
+                                            
+                                            Rectangle {
+                                                height: 38px;
+                                                background: AppTheme.background-content;
+                                                border-radius: 8px;
+                                                
+                                                type_combo := ComboBox {
+                                                    model: ["Serial", "USB", "Network", "Windows"];
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    selected => { 
+                                                        root.get_port_suggestions(self.current-value);
+                                                        root.get_help_message(self.current-value);
+                                                        root.clear_notifications();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        VerticalBox {
+                                            spacing: 8px;
+                                            
+                                            HorizontalBox {
+                                                spacing: 8px;
+                                                alignment: stretch;
+                                                
+                                                Text {
+                                                    text: "Port/Chemin";
+                                                    font-size: 14px;
+                                                    font-weight: 500;
+                                                    color: AppTheme.text-secondary;
+                                                    vertical-alignment: center;
+                                                }
+                                                
+                                                Rectangle { }
+                                                
+                                                // BOUTON SUGGESTIONS 
+                                                if root.port_suggestions.length > 0 : Rectangle {
+                                                    width: 120px;
+                                                    height: 28px;
+                                                    background: AppTheme.background-content;
+                                                    border-radius: 14px;
+                                                    border-width: 1px;
+                                                    border-color: AppTheme.message-info-border;
+                                                    
+                                                    TouchArea {
+                                                        clicked => {
+                                                            // Afficher les suggestions dans le placeholder
+                                                            port_input.placeholder-text = root.port_suggestions[0];
+                                                        }
+                                                    }
+                                                    
+                                                    HorizontalBox {
+                                                        padding: 6px;
+                                                        spacing: 6px;
+                                                        alignment: center;
+                                                        
+                                                        Text {
+                                                            text: "💡";
+                                                            font-size: 16px;
+                                                            color: AppTheme.message-info-text;
+                                                            vertical-alignment: center;
+                                                        }
+                                                        
+                                                        Text {
+                                                            text: "Suggestions";
+                                                            font-size: 12px;
+                                                            font-weight: 500;
+                                                            color: AppTheme.message-info-text;
+                                                            vertical-alignment: center;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            
+                                            Rectangle {
+                                                height: 38px;
+                                                background: AppTheme.background-content;
+                                                border-radius: 8px;
+                                                border-width: root.current_error.has_error && root.current_error.error_type == "Port invalide" ? 2px : 1px;
+                                                border-color: root.current_error.has_error && root.current_error.error_type == "Port invalide" ? AppTheme.message-error-border : AppTheme.border-light;
+                                                
+                                                port_input := LineEdit {
+                                                    placeholder-text: "Ex: COM3, /dev/ttyUSB0";
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    edited => { root.clear_notifications(); }
+                                                }
+                                            }
+                                        }
+                                        
+                                        VerticalBox {
+                                            spacing: 8px;
+                                            
+                                            Text {
+                                                text: "Largeur du papier";
+                                                font-size: 14px;
+                                                font-weight: 500;
+                                                color: AppTheme.text-secondary;
+                                            }
+                                            
+                                            Rectangle {
+                                                height: 38px;
+                                                background: AppTheme.background-content;
+                                                border-radius: 8px;
+                                                
+                                                width_combo := ComboBox {
+                                                    model: ["32 car. (58mm)", "48 car. (80mm)", "64 car. (110mm)"];
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    selected => { root.clear_notifications(); }
+                                                }
+                                            }
+                                        }
+                                        
+                                        HorizontalBox {
+                                            spacing: 10px;
+                                            
+                                            default_checkbox := CheckBox {
+                                                checked: false;
+                                                toggled => { root.clear_notifications(); }
+                                            }
+                                            
+                                            Text {
+                                                text: "Définir comme imprimante par défaut";
+                                                font-size: 14px;
+                                                color: AppTheme.text-secondary;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+                                        
+                                        Rectangle { height: 15px; }
+                                        
+                                        HorizontalBox {
+                                            spacing: 12px;
+                                            
+                                            Rectangle {
+                                                height: 40px;
+                                                min-width: 100px;
+                                                background: AppTheme.background-overlay-medium;
+                                                border-radius: 6px;
+                                                
+                                                Button {
+                                                    text: "🔄 Effacer";
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    clicked => {
+                                                        name_input.text = "";
+                                                        port_input.text = "";
+                                                        type_combo.current-index = 0;
+                                                        width_combo.current-index = 0;
+                                                        default_checkbox.checked = false;
+                                                        root.clear_notifications();
+                                                    }
+                                                }
+                                            }
+                                            
+                                            Rectangle {
+                                                height: 40px;
+                                                min-width: 100px;
+                                                background: (name_input.text != "" && port_input.text != "" && !root.is_adding_printer) ? AppTheme.state-success : AppTheme.background-overlay-medium;
+                                                border-radius: 6px;
+                                                
+                                                Button {
+                                                    text: root.is_adding_printer ? "⏳ Ajout..." : "➕ Ajouter";
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    enabled: name_input.text != "" && port_input.text != "" && !root.is_adding_printer;
+                                                    clicked => {
+                                                        root.is_adding_printer = true;
+                                                        root.add_printer({
+                                                            name: name_input.text,
+                                                            port: port_input.text,
+                                                            printer_type: type_combo.current-value,
+                                                            paper_width: width_combo.current-index == 0 ? "32" :
+                                                                       width_combo.current-index == 1 ? "48" : "64",
+                                                            is_default: default_checkbox.checked,
+                                                        });
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Section d'aide contextuelle 
+                Rectangle {
+                    height: 70px;
+                    background: AppTheme.background-overlay-medium;
+                    border-radius: AppStyles.border-radius;
+                    
+                    VerticalBox {
+                        padding: 15px;
+                        spacing: 8px;
+                        
+                        Text {
+                            text: "💡 Aide contextuelle";
+                            font-size: 14px;
+                            font-weight: 600;
+                            color: AppTheme.text-primary;
+                        }
+                        
+                        Text {
+                            text: root.help_message != "" ? root.help_message : "Sélectionnez un type d'imprimante pour voir l'aide correspondante";
+                            font-size: 12px;
+                            color: AppTheme.text-secondary;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

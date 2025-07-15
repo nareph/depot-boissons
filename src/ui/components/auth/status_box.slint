@@ -1,3 +1,5 @@
+import { AppTheme, AppStyles } from "../../theme/colors.slint";
+
 export component StatusBox inherits Rectangle {
     in property <string> text;
     in property <bool> is_error: false;
@@ -8,10 +10,14 @@ export component StatusBox inherits Rectangle {
     visible: root.text != "";
     
     // Style
-    background: root.is_error ? rgba(255, 107, 107, 0.2) : rgba(46, 213, 115, 0.2);
+    background: root.is_error ? 
+                AppTheme.with-alpha(AppTheme.state-error, 0.2) : 
+                AppTheme.with-alpha(AppTheme.state-success, 0.2);
     border-radius: 8px;
     border-width: 1px;
-    border-color: root.is_error ? rgba(255, 107, 107, 0.5) : rgba(46, 213, 115, 0.5);
+    border-color: root.is_error ? 
+                  AppTheme.with-alpha(AppTheme.state-error, 0.5) : 
+                  AppTheme.with-alpha(AppTheme.state-success, 0.5);
 
     Text {
         text: root.text;
@@ -19,6 +25,8 @@ export component StatusBox inherits Rectangle {
         vertical-alignment: center;
         font-size: 13px;
         font-weight: 500;
-        color: root.is_error ? #ff6b6b : #2ed573;
+        color: root.is_error ? 
+               AppTheme.state-error : 
+               AppTheme.state-success;
     }
 }

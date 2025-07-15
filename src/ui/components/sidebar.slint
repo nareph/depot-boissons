@@ -2,6 +2,7 @@
 
 import { VerticalBox } from "std-widgets.slint";
 import { ModernButton } from "./button.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component AppSidebar inherits Rectangle {
     in property <int> current_view_index;
@@ -9,8 +10,7 @@ export component AppSidebar inherits Rectangle {
     callback view-changed(int);
 
     width: 250px; 
-
-    background: rgba(255, 255, 255, 0.08);
+    background: transparent;
     
     VerticalBox {
         padding: 25px;
@@ -20,16 +20,36 @@ export component AppSidebar inherits Rectangle {
             text: "NAVIGATION";
             font-size: 11px;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.5);
+            color: AppStyles.text-caption;
         }
         
         VerticalBox {
             spacing: 8px;
-            
-            ModernButton { text: "Tableau de Bord"; icon: "📊"; is_active: root.current_view_index == 0; clicked => { root.view-changed(0); } }
-            ModernButton { text: "Produits"; icon: "📦"; is_active: root.current_view_index == 1; clicked => { root.view-changed(1); } }
-            ModernButton { text: "Ventes"; icon: "💰"; is_active: root.current_view_index == 2; clicked => { root.view-changed(2); } }
-            if root.is_admin: ModernButton { text: "Utilisateurs"; icon: "👥"; is_active: root.current_view_index == 3; clicked => { root.view-changed(3); } }
+                        
+            ModernButton { 
+                text: "Tableau de Bord"; 
+                icon: "📊"; 
+                is_active: root.current_view_index == 0; 
+                clicked => { root.view-changed(0); } 
+            }
+            ModernButton { 
+                text: "Produits"; 
+                icon: "📦"; 
+                is_active: root.current_view_index == 1; 
+                clicked => { root.view-changed(1); } 
+            }
+            ModernButton { 
+                text: "Ventes"; 
+                icon: "💰"; 
+                is_active: root.current_view_index == 2; 
+                clicked => { root.view-changed(2); } 
+            }
+            if root.is_admin: ModernButton { 
+                text: "Utilisateurs"; 
+                icon: "👥"; 
+                is_active: root.current_view_index == 3; 
+                clicked => { root.view-changed(3); } 
+            }
         }
     }
 }

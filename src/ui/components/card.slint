@@ -1,6 +1,7 @@
-// src/ui/components/card.slint (Corrigé)
+// src/ui/components/card.slint 
 
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component ModernCard inherits Rectangle { 
     in property <string> title;
@@ -8,18 +9,24 @@ export component ModernCard inherits Rectangle {
     in property <color> accent_color;
     in property <string> icon;
     
-    background: rgba(255, 255, 255, 0.15);
+    background: AppTheme.background-overlay-light;
     border-radius: 16px;
     drop-shadow-blur: 10px;
-    drop-shadow-color: rgba(0, 0, 0, 0.1);
+    drop-shadow-color: AppTheme.shadow-light;
     
-    animate background { duration: 200ms; easing: ease-in-out; }
-    animate drop-shadow-blur { duration: 200ms; easing: ease-in-out; }
+    animate background { 
+        duration: 200ms; 
+        easing: AppStyles.animation-ease; 
+    }
+    animate drop-shadow-blur { 
+        duration: 200ms; 
+        easing: AppStyles.animation-ease; 
+    }
     
     states [
         hover when ta.has-hover: {
-            background: rgba(255, 255, 255, 0.25);
-            drop-shadow-blur: 15px;
+            background: AppTheme.background-overlay-medium;
+            drop-shadow-blur: AppStyles.shadow-blur;
         }
     ]
     
@@ -28,7 +35,6 @@ export component ModernCard inherits Rectangle {
     }
     
     VerticalBox {
-        // On utilise des valeurs fixes
         padding: 25px;
         spacing: 15px;
         
@@ -37,35 +43,39 @@ export component ModernCard inherits Rectangle {
             
             Text {
                 text: root.icon;
-                font-size: 28px; // Taille fixe
+                font-size: 28px;
+                color: AppTheme.text-primary;
             }
             
             Rectangle {
                 width: 4px;
-                height: 30px; // Taille fixe
+                height: 30px;
                 background: root.accent_color;
                 border-radius: 2px;
-                animate background { duration: 300ms; }
+                animate background { 
+                    duration: 300ms; 
+                    easing: AppStyles.animation-ease; 
+                }
             }
         }
         
         VerticalBox {
-            spacing: 8px; // Espacement fixe
+            spacing: 8px;
             
             Text {
                 text: root.title;
-                font-size: 14px; // Taille fixe
+                font-size: 14px;
                 font-weight: 500;
-                color: rgba(255, 255, 255, 0.8);
+                color: AppStyles.text-body;
                 horizontal-alignment: left;
                 overflow: elide;
             }
             
             Text {
                 text: root.value;
-                font-size: 24px; // Taille fixe
+                font-size: 24px;
                 font-weight: 700;
-                color: white;
+                color: AppStyles.text-title;
                 horizontal-alignment: left;
                 overflow: elide;
             }

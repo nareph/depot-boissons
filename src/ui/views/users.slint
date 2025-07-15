@@ -1,6 +1,7 @@
-// src/ui/views/users_view.slint
-import { StandardTableView, ScrollView, Button, LineEdit, ComboBox } from "std-widgets.slint";
+// src/ui/views/users.slint
+import { Button, LineEdit, ComboBox, ScrollView } from "std-widgets.slint";
 import { UserUI } from "../components/models.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component UsersView inherits VerticalLayout {
     in-out property <[UserUI]> users_model;
@@ -9,9 +10,9 @@ export component UsersView inherits VerticalLayout {
     in-out property <int> total_users: 0;
     in-out property <int> users_per_page: 5;
     in-out property <string> search_query: "";
-    in-out property <string> role_filter: "all"; // "all", "admin", "user"
-    in-out property <string> sort_by: "name"; // "name", "role"
-    in-out property <string> sort_order: "asc"; // "asc", "desc"
+    in-out property <string> role_filter: "all";
+    in-out property <string> sort_by: "name";
+    in-out property <string> sort_order: "asc";
     
     callback request_users();
     callback add_user_clicked();
@@ -36,13 +37,11 @@ export component UsersView inherits VerticalLayout {
             text: "Gestion des Utilisateurs"; 
             font-size: 28px; 
             font-weight: 700; 
-            color: white;
+            color: AppTheme.text-primary;
             vertical-alignment: center;
         }
         
-        Rectangle { 
-            // Spacer pour pousser les boutons à droite
-        }
+        Rectangle { } // Spacer
         
         // Actions administrateur
         HorizontalLayout {
@@ -53,7 +52,6 @@ export component UsersView inherits VerticalLayout {
                 text: "➕ Ajouter";
                 height: 40px; 
                 min-width: 120px;
-                primary: true;
                 clicked => { root.add_user_clicked(); } 
             }
         }
@@ -69,8 +67,8 @@ export component UsersView inherits VerticalLayout {
     // Barre de recherche et filtres
     Rectangle {
         height: 60px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
+        background: AppTheme.background-overlay-medium;
+        border-radius: AppStyles.border-radius;
         
         HorizontalLayout {
             padding: 15px;
@@ -81,10 +79,10 @@ export component UsersView inherits VerticalLayout {
             Rectangle {
                 width: 300px;
                 height: 35px;
-                background: rgba(255, 255, 255, 0.1);
+                background: AppTheme.background-overlay-dark;
                 border-radius: 8px;
                 border-width: 1px;
-                border-color: rgba(255, 255, 255, 0.2);
+                border-color: AppTheme.border-light;
                 
                 HorizontalLayout {
                     padding-left: 12px;
@@ -94,7 +92,7 @@ export component UsersView inherits VerticalLayout {
                     
                     Text {
                         text: "🔍";
-                        color: rgba(255, 255, 255, 0.6);
+                        color: AppTheme.text-muted;
                         vertical-alignment: center;
                     }
                     
@@ -111,6 +109,7 @@ export component UsersView inherits VerticalLayout {
 
             HorizontalLayout {
                 spacing: 15px;
+                
                 // Filtre par rôle
                 Rectangle {
                     width: 150px;
@@ -121,7 +120,7 @@ export component UsersView inherits VerticalLayout {
                         Text {
                             text: "Rôle";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         
                         role_filter_combo := ComboBox {
@@ -148,7 +147,7 @@ export component UsersView inherits VerticalLayout {
                         Text {
                             text: "Trier par";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         
                         sort_combo := ComboBox {
@@ -171,9 +170,7 @@ export component UsersView inherits VerticalLayout {
                     }
                 }
 
-                Rectangle {
-                    // Spacer
-                }
+                Rectangle { } // Spacer
                 
                 // Éléments par page
                 Rectangle {
@@ -185,7 +182,7 @@ export component UsersView inherits VerticalLayout {
                         Text {
                             text: "Par page";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         
                         page_size_combo := ComboBox {
@@ -211,14 +208,12 @@ export component UsersView inherits VerticalLayout {
                 "Affichage de " + ((root.current_page - 1) * root.users_per_page + 1) + 
                 " à " + min(root.current_page * root.users_per_page, root.total_users) + 
                 " sur " + root.total_users + " utilisateurs": "" ;
-            color: rgba(255, 255, 255, 0.7);
+            color: AppTheme.text-muted;
             font-size: 14px;
             vertical-alignment: center;
         }
         
-        if root.total_users > 0 : Rectangle {
-            // Spacer
-        }
+        if root.total_users > 0 : Rectangle { } // Spacer
         
         // Contrôles de pagination
         if root.total_pages > 1 : HorizontalLayout {
@@ -238,12 +233,12 @@ export component UsersView inherits VerticalLayout {
             Rectangle {
                 width: 100px;
                 height: 32px;
-                background: rgba(255, 255, 255, 0.1);
+                background: AppTheme.background-overlay-dark;
                 border-radius: 6px;
                 
                 Text {
                     text: root.current_page + " / " + root.total_pages;
-                    color: white;
+                    color: AppTheme.text-primary;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     font-size: 14px;
@@ -262,17 +257,17 @@ export component UsersView inherits VerticalLayout {
         }
     }
 
-    // Ce Rectangle prendra tout l'espace vertical restant dans le VerticalLayout
+    // Conteneur principal de la liste
     Rectangle {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
+        background: AppStyles.list-container;
+        border-radius: AppStyles.border-radius;
         clip: true;
 
         // Message si pas de données
         if root.users_model.length == 0 : Rectangle {
             height: 200px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            background: AppTheme.background-overlay-dark;
+            border-radius: AppStyles.border-radius;
             
             VerticalLayout {
                 alignment: center;
@@ -289,7 +284,7 @@ export component UsersView inherits VerticalLayout {
                          "Aucun utilisateur ne correspond à vos critères" :
                          "Aucun utilisateur trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
                     font-size: 16px;
-                    color: rgba(255, 255, 255, 0.7);
+                    color: AppTheme.text-muted;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
@@ -306,10 +301,10 @@ export component UsersView inherits VerticalLayout {
             }
         }
 
-        // Tableau des utilisateurs 
+        // Tableau des utilisateurs
         if root.users_model.length > 0 : Rectangle {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+            //background: AppTheme.background-overlay-medium;
+            border-radius: AppStyles.border-radius;
             clip: true;
 
             ScrollView {
@@ -320,10 +315,10 @@ export component UsersView inherits VerticalLayout {
                     spacing: 2px;
                     width: 100%;
 
-                    // En-tête du tableau responsive
+                    // En-tête du tableau
                     Rectangle {
                         height: 45px;
-                        background: rgba(255, 255, 255, 0.15);
+                        background: AppStyles.list-header;
                         border-radius: 8px;
                         width: 100%;
                         
@@ -338,7 +333,7 @@ export component UsersView inherits VerticalLayout {
                                 Text { 
                                     text: "Nom d'utilisateur"; 
                                     font-weight: 600; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     vertical-alignment: center;
                                 }
                             }
@@ -348,7 +343,7 @@ export component UsersView inherits VerticalLayout {
                                 Text { 
                                     text: "Rôle"; 
                                     font-weight: 600; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     horizontal-alignment: center; 
                                     vertical-alignment: center;
                                 }
@@ -359,7 +354,7 @@ export component UsersView inherits VerticalLayout {
                                 Text { 
                                     text: "Actions"; 
                                     font-weight: 600; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     horizontal-alignment: center; 
                                     vertical-alignment: center;
                                 }
@@ -367,17 +362,17 @@ export component UsersView inherits VerticalLayout {
                         }
                     }
 
-                    // Lignes de données responsive
+                    // Lignes de données
                     for user[index] in root.users_model : Rectangle {
                         height: 55px;
-                        background: mod(index, 2) == 0 ? rgba(255, 255, 255, 0.08) : rgba(255, 255, 255, 0.03);
+                        background: mod(index, 2) == 0 ? AppStyles.list-row-even : AppStyles.list-row-odd;
                         border-radius: 8px;
                         width: 100%;
                         
                         // Effet hover
                         touch-area := TouchArea {
                             Rectangle {
-                                background: touch-area.has-hover ? rgba(255, 255, 255, 0.15) : transparent;
+                                background: touch-area.has-hover ? AppStyles.list-row-hover : transparent;
                                 border-radius: 8px;
                             }
                         }
@@ -392,7 +387,7 @@ export component UsersView inherits VerticalLayout {
                                 min-width: 200px;
                                 Text { 
                                     text: user.name; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     vertical-alignment: center;
                                     wrap: word-wrap;
                                     overflow: elide;
@@ -403,7 +398,7 @@ export component UsersView inherits VerticalLayout {
                                 min-width: 120px;
                                 Text { 
                                     text: user.role; 
-                                    color: user.role == "admin" ? #FFD54F : #E1BEE7;
+                                    color: user.role == "Admin" ? AppTheme.state-warning : AppTheme.text-secondary;
                                     horizontal-alignment: center; 
                                     vertical-alignment: center;
                                     font-weight: 600; 

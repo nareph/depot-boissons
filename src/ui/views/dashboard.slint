@@ -1,8 +1,8 @@
 // src/ui/views/dashboard.slint
-
 import { VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 import { ModernCard } from "../components/card.slint";
 import { LowStockProductUI } from "../components/models.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component DashboardView inherits VerticalLayout {
     in property <string> today_revenue;
@@ -17,39 +17,38 @@ export component DashboardView inherits VerticalLayout {
         text: "Aperçu de la journée";
         font-size: 28px;
         font-weight: 700;
-        color: white;
+        color: AppTheme.text-primary;
     }
 
     // 2. Conteneur des cartes
     HorizontalBox {
         spacing: 20px;
-        height: 180px; // Donnons-lui une hauteur fixe et raisonnable
+        height: 180px;
 
         ModernCard {
             title: "Chiffre d'Affaires";
             value: root.today_revenue;
-            accent_color: #27ae60;
+            accent_color: AppTheme.state-success;
             icon: "💰";
         }
         ModernCard {
             title: "Nombre de Ventes";
             value: root.today_sales_count;
-            accent_color: #2980b9;
+            accent_color: AppTheme.state-info;
             icon: "📈";
         }
         ModernCard {
             title: "Stock Faible";
             value: root.low_stock_products_model.length;
-            accent_color: #e74c3c;
+            accent_color: AppTheme.state-error;
             icon: "⚠️";
         }
     }
 
     // 3. Section stock faible 
     Rectangle {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        // On utilise `clip` pour s'assurer que le contenu ne dépasse pas les coins arrondis.
+        background: AppStyles.container-section;
+        border-radius: AppStyles.border-radius;
         clip: true;
 
         VerticalBox {
@@ -64,33 +63,47 @@ export component DashboardView inherits VerticalLayout {
                     text: "Produits à Stock Faible";
                     font-size: 20px;
                     font-weight: 600;
-                    color: white;
+                    color: AppTheme.text-primary;
                 }
             }
 
-            // La ScrollView prendra tout l'espace restant dans ce conteneur.
-            ScrollView {
-                VerticalBox {
-                    spacing: 8px;
+            // Conteneur de la liste 
+            Rectangle {
+                background: AppStyles.list-container;
+                border-radius: AppStyles.border-radius;
+                clip: true;
 
-                    for item in root.low_stock_products_model: Rectangle {
-                        height: 50px;
-                        background: rgba(255, 255, 255, 0.05);
-                        border-radius: 8px;
-                        
-                        HorizontalBox {
-                            padding: 15px;
-                            alignment:space-between;
-                            // Pour l'espacement, on utilise un Rectangle flexible.
-                            Text {
-                                text: item.name;
-                                font-weight: 600;
-                                color: white;
+                ScrollView {
+                    VerticalBox {
+                        spacing: 2px;
+                        padding: 10px;
+
+                        for item[index] in root.low_stock_products_model: Rectangle {
+                            height: 50px;
+                            background: mod(index, 2) == 0 ? AppStyles.list-row-even : AppStyles.list-row-odd;
+                            border-radius: 8px;
+                            
+                            // Effet de survol 
+                            touch-area := TouchArea {
+                                Rectangle {
+                                    background: touch-area.has-hover ? AppStyles.list-row-hover : transparent;
+                                    border-radius: 8px;
+                                }
                             }
-                            Text {
-                                text: item.stock_info;
-                                color: #ff6b6b;
-                                font-weight: 600;
+                            
+                            HorizontalBox {
+                                padding: 15px;
+                                alignment: space-between;
+                                Text {
+                                    text: item.name;
+                                    font-weight: 600;
+                                    color: AppTheme.text-primary;
+                                }
+                                Text {
+                                    text: item.stock_info;
+                                    color: AppTheme.state-error-light;
+                                    font-weight: 600;
+                                }
                             }
                         }
                     }

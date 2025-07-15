@@ -6,6 +6,8 @@ use uuid::Uuid;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use super::{show_info_dialog, show_error_dialog};
+
 /// Configure tous les callbacks liés à la gestion des utilisateurs pour la fenêtre principale.
 /// Cette fonction n'est appelée que si l'utilisateur connecté est un administrateur.
 pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
@@ -438,30 +440,17 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                             match queries::user_queries::reset_user_password(user_id) {
                                 Ok(temp_password) => {
                                     // Afficher la popup d'information avec le mot de passe
-                                    if let Ok(info_dialog) = ui::InfoDialog::new() {
-                                        info_dialog.set_dialog_title("Mot de Passe Réinitialisé".into());
-                                        info_dialog.set_message(format!("Le mot de passe temporaire est :\n\n{}", temp_password).into());
-                                        let dialog_handle = info_dialog.as_weak();
-                                        info_dialog.on_ok_clicked(move || { 
-                                            if let Some(d) = dialog_handle.upgrade() {
-                                                let _ = d.hide(); 
-                                            }
-                                         });
-                                        let _ = info_dialog.run();
-                                    }
+                                    show_info_dialog(
+                                        "Mot de Passe Réinitialisé",
+                                        &format!("Le mot de passe temporaire est :\n\n{}", temp_password),
+                                    );
                                 },
                                 Err(e) => {
                                     log::error!("Erreur lors de la réinitialisation du mot de passe: {}", e);
-                                    if let Ok(error_dialog) = ui::ErrorDialog::new() {
-                                        error_dialog.set_message("Impossible de réinitialiser le mot de passe.".into());
-                                        let dialog_handle_cancel = error_dialog.as_weak();
-                                        error_dialog.on_ok_clicked(move || { 
-                                            if let Some(d) = dialog_handle_cancel.upgrade() {
-                                                let _ = d.hide(); 
-                                            }
-                                        });
-                                        let _ = error_dialog.run();
-                                    }
+                                    show_error_dialog(
+                                        "Erreur de Réinitialisation",
+                                        "Impossible de réinitialiser le mot de passe. Veuillez réessayer plus tard.",
+                                    );
                                 },
                             }
                         }

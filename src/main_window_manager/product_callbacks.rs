@@ -6,6 +6,8 @@ use slint::{ComponentHandle, Weak};
 use uuid::Uuid;
 use std::sync::{Arc, Mutex};
 
+use super::{show_info_dialog, show_error_dialog};
+
 /// Structure pour maintenir l'état des filtres et de la pagination
 #[derive(Debug, Clone)]
 pub struct ProductsState {
@@ -361,29 +363,16 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                             }
                         },
                         Ok(false) => {
-                            if let Ok(info_dialog) = ui::InfoDialog::new() {
-                                info_dialog.set_dialog_title("Suppression impossible".into());
-                                info_dialog.set_message(format!("Le produit '{}' ne peut pas être supprimé car il est lié à des ventes existantes.", product_name).into());
-                                let info_dialog_handle = info_dialog.as_weak();
-                                info_dialog.on_ok_clicked(move || {
-                                    if let Some(d) = info_dialog_handle.upgrade() {
-                                        let _ = d.hide();
-                                    }
-                                });
-                                let _ = info_dialog.run();
-                            }
+                            show_info_dialog(
+                                "Suppression impossible",
+                                &format!("Le produit '{}' ne peut pas être supprimé car il est lié à des ventes existantes.", product_name)
+                            );
                         },
                         Err(e) => {
-                            if let Ok(error_dialog) = ui::ErrorDialog::new() {
-                                error_dialog.set_message(format!("Erreur: {}", e).into());
-                                let error_dialog_handle = error_dialog.as_weak();
-                                error_dialog.on_ok_clicked(move || {
-                                    if let Some(d) = error_dialog_handle.upgrade() {
-                                        let _ = d.hide();
-                                    }
-                                });
-                                let _ = error_dialog.run();
-                            }
+                            show_error_dialog(
+                                "Erreur de suppression",
+                                &format!("Impossible de vérifier la suppression du produit '{}': {}", product_name, e)
+                            );
                         }
                     }
                 }

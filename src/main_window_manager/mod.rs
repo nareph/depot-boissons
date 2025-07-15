@@ -2,6 +2,7 @@
 
 // Déclarer les sous-modules
 mod dashboard_callbacks;
+mod printer_callbacks;
 mod product_callbacks;
 mod sale_callbacks;
 mod user_callbacks;
@@ -58,7 +59,7 @@ pub fn run(user: &User) -> AppResult<WindowCloseReason> {
 
 fn setup_callbacks(
     main_window: &ui::MainWindow,
-    user: &User, 
+    user: &User,
     logout_flag: std::rc::Rc<std::cell::RefCell<bool>>,
 ) {
     let main_window_handle = main_window.as_weak();
@@ -89,7 +90,43 @@ fn setup_callbacks(
     product_callbacks::setup(&main_window_handle);
     sale_callbacks::setup(&main_window.as_weak(), user.id, user.role == "Admin");
 
+    // Configuration des callbacks pour les imprimantes
+    printer_callbacks::setup(&main_window_handle);
+
+    // Charger les imprimantes au démarrage
+    main_window.invoke_load_printers();
+
     if user.role == "Admin" {
         user_callbacks::setup(&main_window_handle, user.id);
+    }
+}
+
+/// Affiche un dialogue d'information standard.
+pub fn show_info_dialog(title: &str, message: &str) {
+    if let Ok(dialog) = ui::InfoDialog::new() {
+        dialog.set_dialog_title(title.into());
+        dialog.set_message(message.into());
+        let handle = dialog.as_weak();
+        dialog.on_ok_clicked(move || {
+            if let Some(d) = handle.upgrade() {
+                let _ = d.hide();
+            }
+        });
+        let _ = dialog.run();
+    }
+}
+
+/// Affiche un dialogue d'erreur standard.
+pub fn show_error_dialog(title: &str, message: &str) {
+    if let Ok(dialog) = ui::ErrorDialog::new() {
+        dialog.set_dialog_title(title.into());
+        dialog.set_message(message.into());
+        let handle = dialog.as_weak();
+        dialog.on_ok_clicked(move || {
+            if let Some(d) = handle.upgrade() {
+                let _ = d.hide();
+            }
+        });
+        let _ = dialog.run();
     }
 }

@@ -90,4 +90,4 @@ Les contributions sont les bienvenues ! Si vous souhaitez améliorer ce projet, 
 
 ## 📜 Licence
 
-Ce projet est distribué sous la licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+Ce projet est distribué sous la licence MIT. 

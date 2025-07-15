@@ -1,4 +1,5 @@
 import { HorizontalBox, Button, ProgressIndicator } from "std-widgets.slint";
+import { AppTheme, AppStyles } from "../../theme/colors.slint";
 
 export component ActionButton inherits Rectangle {
     in property <string> text;
@@ -8,19 +9,29 @@ export component ActionButton inherits Rectangle {
 
     height: 50px;
     background: root.enabled && !root.loading ? 
-               @linear-gradient(135deg, #667eea 0%, #764ba2 100%) :
-               rgba(102, 126, 234, 0.5);
-    border-radius: 12px;
-    animate background { duration: 250ms; }
+               AppStyles.button-primary-gradient :
+               AppTheme.with-alpha(AppTheme.primary-gradient-start, 0.5);
+    border-radius: AppStyles.border-radius;
+    animate background { 
+        duration: AppStyles.animation-duration;
+        easing: AppStyles.animation-ease;
+    }
     
     if !root.loading : Button {
-        width: 100%; height: 100%;
-        text: root.text; enabled: root.enabled;
+        width: 100%; 
+        height: 100%;
+        text: root.text; 
+        enabled: root.enabled;
         clicked => { root.clicked() }
     }
+    
     if root.loading : HorizontalBox {
-        alignment: center; spacing: 10px;
+        alignment: center; 
+        spacing: 10px;
         ProgressIndicator { indeterminate: true; }
-        Text { text: "Chargement..."; color: white; }
+        Text { 
+            text: "Chargement..."; 
+            color: AppTheme.text-primary; 
+        }
     }
 }

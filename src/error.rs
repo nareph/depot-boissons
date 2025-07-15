@@ -30,11 +30,14 @@ pub enum AppError {
     /// Erreur d'autorisation (ex: accès refusé à une ressource).
     Unauthorized(String),
 
-    ///
+    /// Erreur de validation des données
     ValidationError(String),
 
     /// Erreur standard d'entrée/sortie.
     Io(std::io::Error),
+
+    /// Erreur liée à l'impression
+    PrintingError(String),
 
     /// Erreur générique pour les messages d'erreur personnalisés créés dans notre code.
     Generic(String),
@@ -51,6 +54,7 @@ impl fmt::Display for AppError {
             AppError::ValidationError(e) => write!(f, "Erreur de validation: {}", e),
             AppError::Unauthorized(msg) => write!(f, "Erreur d'autorisation : {}", msg),
             AppError::Io(err) => write!(f, "Erreur d'entrée/sortie : {}", err),
+            AppError::PrintingError(msg) => write!(f, "Erreur d'impression : {}", msg),
             AppError::Generic(msg) => write!(f, "Erreur : {}", msg),
         }
     }
@@ -66,8 +70,9 @@ impl StdError for AppError {
             AppError::Seeding(_)
             | AppError::Authentication(_)
             | AppError::Unauthorized(_)
+            | AppError::ValidationError(_)
+            | AppError::PrintingError(_)
             | AppError::Generic(_) => None,
-            AppError::ValidationError(_) => None,
         }
     }
 }
@@ -140,5 +145,19 @@ impl From<std::env::VarError> for AppError {
 impl From<Box<dyn StdError + Send + Sync>> for AppError {
     fn from(err: Box<dyn StdError + Send + Sync>) -> Self {
         AppError::Database(err)
+    }
+}
+
+// Add conversion for escpos_rs errors
+impl From<escpos_rs::Error> for AppError {
+    fn from(err: escpos_rs::Error) -> Self {
+        AppError::PrintingError(err.to_string())
+    }
+}
+
+// Add conversion for serialport errors
+impl From<serialport::Error> for AppError {
+    fn from(err: serialport::Error) -> Self {
+        AppError::PrintingError(err.to_string())
     }
 }

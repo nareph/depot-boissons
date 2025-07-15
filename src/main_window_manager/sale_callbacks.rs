@@ -11,6 +11,8 @@ use std::{
 };
 use uuid::Uuid;
 
+use super::{show_error_dialog, show_info_dialog};
+
 /// Maintient l'état des filtres et pagination pour les ventes
 #[derive(Debug, Clone)]
 pub struct SalesState {
@@ -417,7 +419,7 @@ fn show_receipt_dialog(receipt: Receipt) {
                 println!("Impression du ticket de caisse...");
 
                 // Afficher un message de succès
-                show_success_dialog("Impression", "Le ticket a été envoyé à l'imprimante");
+                show_info_dialog("Impression", "Le ticket a été envoyé à l'imprimante");
 
                 // Fermer le dialogue du reçu
                 let _ = rd.hide();
@@ -638,34 +640,6 @@ fn show_new_sale_dialog(main_ui: &ui::MainWindow, current_user_id: Uuid) {
 
     // Afficher le dialogue
     let _ = dialog.run();
-}
-
-// Fonction utilitaire pour afficher les messages de succès
-fn show_success_dialog(title: &str, message: &str) {
-    let success_dialog = ui::InfoDialog::new().unwrap();
-    success_dialog.set_dialog_title(title.into());
-    success_dialog.set_message(message.into());
-    let weak_dialog = success_dialog.as_weak();
-    success_dialog.on_ok_clicked(move || {
-        if let Some(dialog) = weak_dialog.upgrade() {
-            let _ = dialog.hide();
-        }
-    });
-    let _ = success_dialog.run();
-}
-
-/// Affiche un dialogue d'erreur
-fn show_error_dialog(title: &str, message: &str) {
-    let error_dialog = ui::ErrorDialog::new().unwrap();
-    error_dialog.set_dialog_title(title.into());
-    error_dialog.set_message(message.into());
-    let weak_dialog = error_dialog.as_weak();
-    error_dialog.on_ok_clicked(move || {
-        if let Some(dialog) = weak_dialog.upgrade() {
-            let _ = dialog.hide();
-        }
-    });
-    let _ = error_dialog.run();
 }
 
 /// Réinitialise les filtres

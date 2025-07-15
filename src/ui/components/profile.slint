@@ -2,6 +2,7 @@
 
 import { VerticalBox, HorizontalBox } from "std-widgets.slint";
 import { MenuItem } from "menu_item.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 // On hérite d'un Rectangle. C'est notre ANCRE de positionnement.
 // Il sera invisible et aura la taille du bouton visible.
@@ -9,6 +10,7 @@ export component HeaderProfile inherits Rectangle {
     in property <string> user_name;
     callback change_password_clicked;
     callback logout_clicked;
+    callback printer_config_clicked; 
 
     // Dimensions de l'ancre. Doit rentrer dans le header.
     width: 200px;
@@ -19,11 +21,15 @@ export component HeaderProfile inherits Rectangle {
     button_visuals := Rectangle {
         width: 100%; // Prend toute la taille de l'ancre
         height: 100%;
-        background: rgba(255, 255, 255, 0.1);
+        background: AppTheme.background-overlay-medium;
         border-radius: 25px;
         
         // Animation au survol
-        states [ hover when area.has-hover: { background: rgba(255, 255, 255, 0.2); } ]
+        states [ 
+            hover when area.has-hover: { 
+                background: AppTheme.background-overlay-light; 
+            } 
+        ]
         
         area := TouchArea {
             mouse-cursor: pointer;
@@ -41,21 +47,26 @@ export component HeaderProfile inherits Rectangle {
                 width: 34px;
                 height: 34px;
                 border-radius: 17px;
-                background: @linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%);
-                Text { text: "👤"; font-size: 16px; vertical-alignment: center; horizontal-alignment: center; }
+                background: AppTheme.accent-brush;
+                Text { 
+                    text: "👤"; 
+                    font-size: 16px; 
+                    vertical-alignment: center; 
+                    horizontal-alignment: center; 
+                }
             }
             // Nom
             Text {
                 text: root.user_name;
                 font-size: 14px;
                 font-weight: 500;
-                color: white;
+                color: AppTheme.text-primary;
                 overflow: elide;
             }
             // Flèche
             Text {
                 text: "▼";
-                color: white;
+                color: AppTheme.text-primary;
                 font-size: 12px;
                 padding-right: 15px;
             }
@@ -70,14 +81,24 @@ export component HeaderProfile inherits Rectangle {
         // L'enfant unique qui a le style visuel
         Rectangle {
             width: 200px;
-            background: rgba(30, 40, 50, 0.98);
-            border-radius: 12px;
-            drop-shadow-blur: 15px;
-            drop-shadow-color: rgba(0, 0, 0, 0.2);
+            background: AppTheme.card-background;
+            border-radius: AppStyles.border-radius;
+            drop-shadow-blur: AppStyles.shadow-blur;
+            drop-shadow-color: AppTheme.shadow-medium;
+            border-width: 1px;
+            border-color: AppTheme.border-light;
             
             VerticalLayout {
                 padding: 8px;
                 spacing: 4px;
+
+                MenuItem {
+                    text: "🖨️ Imprimantes";
+                    clicked => { 
+                        root.printer_config_clicked(); 
+                        dropdown.close();
+                    }
+                }
                 
                 MenuItem {
                     text: "🔑 Changer mot de passe";
@@ -88,7 +109,7 @@ export component HeaderProfile inherits Rectangle {
                 }
                 MenuItem {
                     text: "🚪 Déconnexion";
-                    text_color: #ff6b6b;
+                    text_color: AppTheme.state-error;
                     clicked => {
                         root.logout_clicked();
                         dropdown.close();

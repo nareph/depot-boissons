@@ -1,6 +1,7 @@
 // src/ui/components/button.slint
 
 import { HorizontalBox } from "std-widgets.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component ModernButton inherits Rectangle {
     in property <string> text;
@@ -16,14 +17,27 @@ export component ModernButton inherits Rectangle {
     
     opacity: root.enabled ? 1.0 : 0.5;
     
-    property <brush> normal_bg: area.has-hover ? rgba(255, 255, 255, 0.2) : rgba(255, 255, 255, 0.1);
-    property <brush> active_bg: @linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    property <brush> danger_bg: area.has-hover ? #e74c3c : #c0392b;
-    background: root.is_active ? root.active_bg : (root.kind == "danger" ? root.danger_bg : root.normal_bg);
+    property <brush> normal_bg: area.has-hover ? 
+         AppTheme.background-overlay-medium : 
+         AppTheme.background-overlay-light;
+     property <brush> active_bg: AppStyles.button-primary-gradient;
+    property <brush> danger_bg: area.has-hover ? 
+         AppTheme.state-error : 
+        AppTheme.with-alpha(AppTheme.state-error, 0.8);
     
-    border-radius: 12px;
-    animate background { duration: 250ms; easing: ease-in-out; }
-    animate opacity { duration: 250ms; easing: ease-in-out; }
+    background: root.is_active ? 
+        root.active_bg : 
+        (root.kind == "danger" ? root.danger_bg : root.normal_bg);
+    
+    border-radius: AppStyles.border-radius;
+    animate background { 
+        duration: AppStyles.animation-duration; 
+        easing: AppStyles.animation-ease; 
+    }
+    animate opacity { 
+        duration: AppStyles.animation-duration; 
+        easing: AppStyles.animation-ease; 
+    }
 
     area := TouchArea {
         mouse-cursor: pointer;
@@ -39,7 +53,7 @@ export component ModernButton inherits Rectangle {
         // if root.icon != "" : Text {
         //     text: root.icon;
         //     font-size: 18px;
-        //     color: white;
+        //     color: AppTheme.text-primary;
         //     vertical-alignment: center;
         // }
         
@@ -47,7 +61,7 @@ export component ModernButton inherits Rectangle {
             text: root.text; 
             font-size: 14px; 
             font-weight: 500; 
-            color: white; 
+            color: AppTheme.text-primary; 
             vertical-alignment: center;
         }
     }

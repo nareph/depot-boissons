@@ -13,6 +13,9 @@ pub mod models;
 pub mod queries;
 pub mod schema;
 pub mod seed;
+mod services;
+mod config;
+mod helpers;
 
 use error::AppResult;
 

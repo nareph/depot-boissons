@@ -1,7 +1,7 @@
-// src/ui/views/products_view.slint 
-
+// src/ui/views/products_view.slint
 import { ScrollView, Button, LineEdit, ComboBox } from "std-widgets.slint";
 import { ProductUI } from "../components/models.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component ProductsView inherits VerticalLayout {
     in property <bool> is_admin;
@@ -28,8 +28,7 @@ export component ProductsView inherits VerticalLayout {
     padding: 25px;
     spacing: 15px;
 
-     // En-tête avec titre et actions
-     HorizontalLayout {
+    HorizontalLayout {
         spacing: 15px;
         alignment: stretch;
         
@@ -37,15 +36,12 @@ export component ProductsView inherits VerticalLayout {
             text: "Gestion des Produits"; 
             font-size: 28px; 
             font-weight: 700; 
-            color: white;
+            color: AppTheme.text-primary;
             vertical-alignment: center;
         }
         
-        Rectangle { 
-            // Spacer pour pousser les boutons à droite
-        }
+        Rectangle { }
         
-        // Actions réservées aux administrateurs
         if root.is_admin : HorizontalLayout {
             spacing: 10px;
             alignment: end;
@@ -54,7 +50,6 @@ export component ProductsView inherits VerticalLayout {
                 text: "➕ Ajouter";
                 height: 40px; 
                 min-width: 120px;
-                primary: true;
                 clicked => { root.add_product_clicked(); } 
             }
         }
@@ -67,25 +62,23 @@ export component ProductsView inherits VerticalLayout {
         }
     }
 
-    // Barre de recherche et filtres
     Rectangle {
         height: 60px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
+        background: AppTheme.background-overlay-medium;
+        border-radius: AppStyles.border-radius;
         
         HorizontalLayout {
             padding: 15px;
             spacing: 15px;
             alignment: space-around;
             
-            // Recherche
             Rectangle {
                 width: 300px;
                 height: 35px;
-                background: rgba(255, 255, 255, 0.1);
+                background: AppTheme.background-overlay-dark;
                 border-radius: 8px;
                 border-width: 1px;
-                border-color: rgba(255, 255, 255, 0.2);
+                border-color: AppTheme.border-light;
                 
                 HorizontalLayout {
                     padding-left: 12px;
@@ -95,7 +88,7 @@ export component ProductsView inherits VerticalLayout {
                     
                     Text {
                         text: "🔍";
-                        color: rgba(255, 255, 255, 0.6);
+                        color: AppTheme.text-muted;
                         vertical-alignment: center;
                     }
                     
@@ -112,7 +105,7 @@ export component ProductsView inherits VerticalLayout {
 
             HorizontalLayout {
                 spacing: 15px;
-                // Filtre par stock
+                
                 Rectangle {
                     width: 150px;
                     
@@ -122,7 +115,7 @@ export component ProductsView inherits VerticalLayout {
                         Text {
                             text: "Stock";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         
                         stock_filter_combo := ComboBox {
@@ -139,7 +132,6 @@ export component ProductsView inherits VerticalLayout {
                     }
                 }
                 
-                // Tri
                 Rectangle {
                     width: 150px;
                     VerticalLayout {
@@ -147,7 +139,7 @@ export component ProductsView inherits VerticalLayout {
                         Text {
                             text: "Trier par";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         sort_combo := ComboBox {
                             model: ["Nom ↑", "Nom ↓", "Stock ↑", "Stock ↓", "Prix ↑", "Prix ↓"];
@@ -169,11 +161,8 @@ export component ProductsView inherits VerticalLayout {
                     }
                 }
 
-                Rectangle {
-                    // Spacer
-                }
+                Rectangle { }
                 
-                // Éléments par page
                 Rectangle {
                     width: 120px;
                     
@@ -183,7 +172,7 @@ export component ProductsView inherits VerticalLayout {
                         Text {
                             text: "Par page";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         
                         page_size_combo := ComboBox {
@@ -195,12 +184,10 @@ export component ProductsView inherits VerticalLayout {
                         }
                     }
                 }
-
             }
         }
     }
 
-    // Information sur les résultats et pagination
     HorizontalLayout {
         spacing: 15px;
         alignment: stretch;
@@ -210,17 +197,13 @@ export component ProductsView inherits VerticalLayout {
                 "Affichage de " + ((root.current_page - 1) * root.products_per_page + 1) + 
                 " à " + min(root.current_page * root.products_per_page, root.total_products) + 
                 " sur " + root.total_products + " produits": "" ;
-               // "Aucun produit trouvé";
-            color: rgba(255, 255, 255, 0.7);
+            color: AppTheme.text-muted;
             font-size: 14px;
             vertical-alignment: center;
         }
         
-        if root.total_products > 0 : Rectangle {
-            // Spacer
-        }
+        if root.total_products > 0 : Rectangle { }
         
-        // Contrôles de pagination
         if root.total_pages > 1 : HorizontalLayout {
             spacing: 8px;
             alignment: end;
@@ -238,12 +221,12 @@ export component ProductsView inherits VerticalLayout {
             Rectangle {
                 width: 100px;
                 height: 32px;
-                background: rgba(255, 255, 255, 0.1);
+                background: AppTheme.background-overlay-dark;
                 border-radius: 6px;
                 
                 Text {
                     text: root.current_page + " / " + root.total_pages;
-                    color: white;
+                    color: AppTheme.text-primary;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     font-size: 14px;
@@ -262,66 +245,59 @@ export component ProductsView inherits VerticalLayout {
         }
     }
 
-    // Conteneur principal de la liste
+    // Conteneur principal de la liste 
     Rectangle {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
+        background: AppStyles.list-container;
+        border-radius: AppStyles.border-radius;
         clip: true;
 
-         // Message si pas de données
-    if root.products_model.length == 0 : Rectangle {
-        height: 200px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 16px;
-        
-        VerticalLayout {
-            alignment: center;
-            spacing: 10px;
+        if root.products_model.length == 0 : Rectangle {
+            height: 200px;
+            background: AppTheme.background-overlay-dark;
+            border-radius: AppStyles.border-radius;
             
-            Text {
-                text: "📦";
-                font-size: 48px;
-                horizontal-alignment: center;
-            }
-            
-            Text {
-                text: root.search_query != "" || root.stock_filter != "all" ? 
-                     "Aucun produit ne correspond à vos critères" :
-                     "Aucun produit trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
-                font-size: 16px;
-                color: rgba(255, 255, 255, 0.7);
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-            
-            if root.search_query != "" || root.stock_filter != "all" : Button {
-                text: "Effacer les filtres";
-                height: 36px;
-                clicked => {
-                    search_input.text = "";
-                    root.search_products("");
-                    root.filter_products("all");
+            VerticalLayout {
+                alignment: center;
+                spacing: 10px;
+                
+                Text {
+                    text: "📦";
+                    font-size: 48px;
+                    horizontal-alignment: center;
+                }
+                
+                Text {
+                    text: root.search_query != "" || root.stock_filter != "all" ? 
+                         "Aucun produit ne correspond à vos critères" :
+                         "Aucun produit trouvé.\nCliquez sur 'Rafraîchir' pour charger les données.";
+                    font-size: 16px;
+                    color: AppTheme.text-muted;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                
+                if root.search_query != "" || root.stock_filter != "all" : Button {
+                    text: "Effacer les filtres";
+                    height: 36px;
+                    clicked => {
+                        search_input.text = "";
+                        root.search_products("");
+                        root.filter_products("all");
+                    }
                 }
             }
         }
-    }
 
-        // Tableau des produits 
-        if root.products_model.length > 0 : Rectangle {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            clip: true;
-            ScrollView {
-                VerticalLayout {
-                    padding: 20px;
-                    spacing: 2px;
-                    width: 100%;
+        if root.products_model.length > 0 : ScrollView {
+            VerticalLayout {
+                padding: 20px;
+                spacing: 2px;
+                width: 100%;
 
-                 
-                // En-tête du tableau responsive
+                // En-tête de la liste avec couleurs harmonisées
                 Rectangle {
                     height: 45px;
-                    background: rgba(255, 255, 255, 0.15);
+                    background: AppStyles.list-header;
                     border-radius: 8px;
                     width: 100%;
                     
@@ -336,7 +312,7 @@ export component ProductsView inherits VerticalLayout {
                             Text { 
                                 text: "Nom du Produit"; 
                                 font-weight: 600; 
-                                color: white; 
+                                color: AppTheme.text-primary; 
                                 vertical-alignment: center;
                             }
                         }
@@ -346,7 +322,7 @@ export component ProductsView inherits VerticalLayout {
                             Text { 
                                 text: "Stock"; 
                                 font-weight: 600; 
-                                color: white; 
+                                color: AppTheme.text-primary; 
                                 horizontal-alignment: center; 
                                 vertical-alignment: center;
                             }
@@ -357,7 +333,7 @@ export component ProductsView inherits VerticalLayout {
                             Text { 
                                 text: "Prix"; 
                                 font-weight: 600; 
-                                color: white; 
+                                color: AppTheme.text-primary; 
                                 horizontal-alignment: center; 
                                 vertical-alignment: center;
                             }
@@ -368,7 +344,7 @@ export component ProductsView inherits VerticalLayout {
                             Text { 
                                 text: "Actions"; 
                                 font-weight: 600; 
-                                color: white; 
+                                color: AppTheme.text-primary; 
                                 horizontal-alignment: center; 
                                 vertical-alignment: center;
                             }
@@ -376,17 +352,16 @@ export component ProductsView inherits VerticalLayout {
                     }
                 }
 
-                // Lignes de données responsive
+                // Lignes de la liste 
                 for product[index] in root.products_model : Rectangle {
                     height: 55px;
-                    background: mod(index, 2) == 0 ? rgba(255, 255, 255, 0.08) : rgba(255, 255, 255, 0.03);
+                    background: mod(index, 2) == 0 ? AppStyles.list-row-even : AppStyles.list-row-odd;
                     border-radius: 8px;
                     width: 100%;
                     
-                    // Effet hover
                     touch-area := TouchArea {
                         Rectangle {
-                            background: touch-area.has-hover ? rgba(255, 255, 255, 0.15) : transparent;
+                            background: touch-area.has-hover ? AppStyles.list-row-hover : transparent;
                             border-radius: 8px;
                         }
                     }
@@ -401,7 +376,7 @@ export component ProductsView inherits VerticalLayout {
                             min-width: 200px;
                             Text { 
                                 text: product.name; 
-                                color: white; 
+                                color: AppTheme.text-primary; 
                                 vertical-alignment: center;
                                 wrap: word-wrap;
                                 overflow: elide;
@@ -412,7 +387,7 @@ export component ProductsView inherits VerticalLayout {
                             min-width: 200px;
                             Text { 
                                 text: product.stock; 
-                                color: #81C784;
+                                color: AppTheme.state-success;
                                 horizontal-alignment: center; 
                                 vertical-alignment: center;
                                 font-weight: 600; 
@@ -423,7 +398,7 @@ export component ProductsView inherits VerticalLayout {
                             min-width: 200px;
                             Text { 
                                 text: product.price_offers; 
-                                color: #FFD54F;
+                                color: AppTheme.state-warning;
                                 horizontal-alignment: center; 
                                 vertical-alignment: center;
                                 font-weight: 600; 
@@ -457,8 +432,7 @@ export component ProductsView inherits VerticalLayout {
                         }
                     }
                 }
-            
             }
-               }   }
-    
-}}
+        }
+    }
+}

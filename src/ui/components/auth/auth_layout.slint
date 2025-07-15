@@ -1,4 +1,5 @@
 import { VerticalBox } from "std-widgets.slint";
+import { AppTheme, AppStyles } from "../../theme/colors.slint";
 
 export component AuthLayout inherits Window {
     in-out property <length> card_width: 360px;
@@ -10,19 +11,19 @@ export component AuthLayout inherits Window {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: @linear-gradient(145deg, #667eea 0%, #764ba2 100%);
+        background: AppStyles.container-main;
 
         Rectangle {
             width: root.card_width;
             height: root.card_height;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            background: rgba(255, 255, 255, 0.2);
+            background: AppTheme.background-overlay-medium;
             border-radius: 20px;
             border-width: 1px;
-            border-color: rgba(255, 255, 255, 0.3);
+            border-color: AppTheme.border-light;
             drop-shadow-blur: 20px;
-            drop-shadow-color: rgba(0, 0, 0, 0.1);
+            drop-shadow-color: AppTheme.shadow-light;
 
             @children
         }

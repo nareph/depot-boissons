@@ -5,6 +5,7 @@ import { AuthLayout } from "../components/auth/auth_layout.slint";
 import { IconLineEdit } from "../components/auth/icon_line_edit.slint";
 import { ActionButton } from "../components/auth/action_button.slint";
 import { StatusBox } from "../components/auth/status_box.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component LoginWindow inherits AuthLayout {
     title: "Connexion";
@@ -18,20 +19,61 @@ export component LoginWindow inherits AuthLayout {
     //card-height: 520px;
     
     VerticalBox {
-        padding: 40px; spacing: 20px; alignment: center;
-        Rectangle { width: 80px; height: 80px; border-radius: 40px; background: @linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%); Text { text: "🥤"; font-size: 40px; vertical-alignment: center; horizontal-alignment: center; }}
-        Text { text: "Bienvenue"; font-size: 28px; font-weight: 600; color: white; }
-        Text { text: "Connectez-vous à votre compte"; font-size: 14px; color: rgba(255, 255, 255, 0.8); }
+        padding: 40px; 
+        spacing: 20px; 
+        alignment: center;
+        
+        Rectangle { 
+            width: 80px; 
+            height: 80px; 
+            border-radius: 40px; 
+            background: AppTheme.accent-brush; 
+            Text { 
+                text: "🥤"; 
+                font-size: 40px; 
+                vertical-alignment: center; 
+                horizontal-alignment: center; 
+            }
+        }
+        
+        Text { 
+            text: "Bienvenue"; 
+            font-size: 28px; 
+            font-weight: 600; 
+            color: AppStyles.text-title; 
+        }
+        
+        Text { 
+            text: "Connectez-vous à votre compte"; 
+            font-size: 14px; 
+            color: AppStyles.text-body; 
+        }
+        
         VerticalBox {
             spacing: 15px;
-            IconLineEdit { icon: "👤"; placeholder_text: "Nom d'utilisateur"; text <=> root.login_text;}
-            IconLineEdit { icon: "🔐"; placeholder_text: "Mot de passe"; is_password: true; text <=> root.password_text;}
+            IconLineEdit { 
+                icon: "👤"; 
+                placeholder_text: "Nom d'utilisateur"; 
+                text <=> root.login_text;
+            }
+            IconLineEdit { 
+                icon: "🔐"; 
+                placeholder_text: "Mot de passe"; 
+                is_password: true; 
+                text <=> root.password_text;
+            }
         }
+        
         ActionButton {
-            text: "Se connecter"; loading: root.loading;
+            text: "Se connecter"; 
+            loading: root.loading;
             enabled: !root.loading && root.login_text != "" && root.password_text != "";
             clicked => { root.login_clicked(root.login_text, root.password_text) }
         }
-        StatusBox { text: !root.loading ? root.status_text : ""; is_error: root.status_text != "Connexion réussie !"; }
+        
+        StatusBox { 
+            text: !root.loading ? root.status_text : ""; 
+            is_error: root.status_text != "Connexion réussie !"; 
+        }
     }
 }

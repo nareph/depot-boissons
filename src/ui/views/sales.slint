@@ -1,5 +1,7 @@
+// src/ui/views/sales.slint
 import { Button, LineEdit, ComboBox, ScrollView } from "std-widgets.slint";
 import { SaleUI } from "../components/models.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component SalesView inherits VerticalLayout {
     in property <bool> is_admin;
@@ -34,13 +36,11 @@ export component SalesView inherits VerticalLayout {
             text: "Historique des Ventes"; 
             font-size: 28px; 
             font-weight: 700; 
-            color: white;
+            color: AppTheme.text-primary;
             vertical-alignment: center;
         }
         
-        Rectangle { 
-            // Spacer pour pousser les boutons à droite
-        }
+        Rectangle { } // Spacer
         
         HorizontalLayout {
             spacing: 10px;
@@ -50,7 +50,6 @@ export component SalesView inherits VerticalLayout {
                 text: "➕ Nouvelle Vente";
                 height: 40px; 
                 min-width: 150px;
-                primary: true;
                 clicked => { root.add_sale_clicked(); } 
             }
             
@@ -66,8 +65,8 @@ export component SalesView inherits VerticalLayout {
     // Barre de recherche et filtres
     Rectangle {
         height: 60px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 12px;
+        background: AppTheme.background-overlay-medium;
+        border-radius: AppStyles.border-radius;
         
         HorizontalLayout {
             padding: 15px;
@@ -78,10 +77,10 @@ export component SalesView inherits VerticalLayout {
             Rectangle {
                 width: 300px;
                 height: 35px;
-                background: rgba(255, 255, 255, 0.1);
+                background: AppTheme.background-overlay-dark;
                 border-radius: 8px;
                 border-width: 1px;
-                border-color: rgba(255, 255, 255, 0.2);
+                border-color: AppTheme.border-light;
                 
                 HorizontalLayout {
                     padding-left: 12px;
@@ -91,7 +90,7 @@ export component SalesView inherits VerticalLayout {
                     
                     Text {
                         text: "🔍";
-                        color: rgba(255, 255, 255, 0.6);
+                        color: AppTheme.text-muted;
                         vertical-alignment: center;
                     }
                     
@@ -108,6 +107,7 @@ export component SalesView inherits VerticalLayout {
 
             HorizontalLayout {
                 spacing: 15px;
+                
                 // Filtre par date
                 Rectangle {
                     width: 150px;
@@ -118,7 +118,7 @@ export component SalesView inherits VerticalLayout {
                         Text {
                             text: "Période";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         
                         date_filter_combo := ComboBox {
@@ -145,7 +145,7 @@ export component SalesView inherits VerticalLayout {
                         Text {
                             text: "Trier par";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         sort_combo := ComboBox {
                             model: ["Date ↓", "Date ↑", "Montant ↓", "Montant ↑"];
@@ -163,9 +163,7 @@ export component SalesView inherits VerticalLayout {
                     }
                 }
 
-                Rectangle {
-                    // Spacer
-                }
+                Rectangle { } // Spacer
                 
                 // Éléments par page
                 Rectangle {
@@ -177,7 +175,7 @@ export component SalesView inherits VerticalLayout {
                         Text {
                             text: "Par page";
                             font-size: 12px;
-                            color: rgba(255, 255, 255, 0.7);
+                            color: AppTheme.text-muted;
                         }
                         
                         page_size_combo := ComboBox {
@@ -208,14 +206,12 @@ export component SalesView inherits VerticalLayout {
                 "Affichage de " + ((root.current_page - 1) * root.sales_per_page + 1) + 
                 " à " + min(root.current_page * root.sales_per_page, root.total_sales) + 
                 " sur " + root.total_sales + " ventes" : "";
-            color: rgba(255, 255, 255, 0.7);
+            color: AppTheme.text-muted;
             font-size: 14px;
             vertical-alignment: center;
         }
         
-        if root.total_sales > 0 : Rectangle {
-            // Spacer
-        }
+        if root.total_sales > 0 : Rectangle { } // Spacer
         
         // Contrôles de pagination
         if root.total_pages > 1 : HorizontalLayout {
@@ -235,12 +231,12 @@ export component SalesView inherits VerticalLayout {
             Rectangle {
                 width: 100px;
                 height: 32px;
-                background: rgba(255, 255, 255, 0.1);
+                background: AppTheme.background-overlay-dark;
                 border-radius: 6px;
                 
                 Text {
                     text: root.current_page + " / " + root.total_pages;
-                    color: white;
+                    color: AppTheme.text-primary;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     font-size: 14px;
@@ -261,15 +257,15 @@ export component SalesView inherits VerticalLayout {
 
     // Conteneur principal de la liste
     Rectangle {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
+        background: AppStyles.list-container;
+        border-radius: AppStyles.border-radius;
         clip: true;
 
         // Message si pas de données
         if root.sales_model.length == 0 : Rectangle {
             height: 200px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
+            background: AppTheme.background-overlay-dark;
+            border-radius: AppStyles.border-radius;
             
             VerticalLayout {
                 alignment: center;
@@ -286,7 +282,7 @@ export component SalesView inherits VerticalLayout {
                          "Aucune vente ne correspond à vos critères" :
                          "Aucune vente trouvée.\nCliquez sur 'Rafraîchir' pour charger les données.";
                     font-size: 16px;
-                    color: rgba(255, 255, 255, 0.7);
+                    color: AppTheme.text-muted;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
@@ -305,8 +301,8 @@ export component SalesView inherits VerticalLayout {
 
         // Liste des ventes
         if root.sales_model.length > 0 : Rectangle {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+            //background: AppTheme.background-overlay-medium;
+            border-radius: AppStyles.border-radius;
             clip: true;
             ScrollView {
                 VerticalLayout {
@@ -317,7 +313,7 @@ export component SalesView inherits VerticalLayout {
                     // En-tête du tableau
                     Rectangle {
                         height: 45px;
-                        background: rgba(255, 255, 255, 0.15);
+                        background: AppStyles.list-header;
                         border-radius: 8px;
                         width: 100%;
                         
@@ -332,7 +328,7 @@ export component SalesView inherits VerticalLayout {
                                 Text { 
                                     text: "N° Vente"; 
                                     font-weight: 700; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     vertical-alignment: center;
                                 }
                             }
@@ -342,7 +338,7 @@ export component SalesView inherits VerticalLayout {
                                 Text { 
                                     text: "Date"; 
                                     font-weight: 700; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     horizontal-alignment: center; 
                                     vertical-alignment: center;
                                 }
@@ -353,7 +349,7 @@ export component SalesView inherits VerticalLayout {
                                 Text { 
                                     text: "Montant"; 
                                     font-weight: 700; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     horizontal-alignment: center; 
                                     vertical-alignment: center;
                                 }
@@ -364,7 +360,7 @@ export component SalesView inherits VerticalLayout {
                                 Text { 
                                     text: "Articles"; 
                                     font-weight: 700; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     horizontal-alignment: center; 
                                     vertical-alignment: center;
                                 }
@@ -375,7 +371,7 @@ export component SalesView inherits VerticalLayout {
                                 Text { 
                                     text: "Actions"; 
                                     font-weight: 700; 
-                                    color: white; 
+                                    color: AppTheme.text-primary; 
                                     horizontal-alignment: center; 
                                     vertical-alignment: center;
                                 }
@@ -386,14 +382,14 @@ export component SalesView inherits VerticalLayout {
                     // Lignes de données
                     for sale[index] in root.sales_model : Rectangle {
                         height: 60px;
-                        background: mod(index, 2) == 0 ? rgba(255, 255, 255, 0.08) : rgba(255, 255, 255, 0.03);
+                        background: mod(index, 2) == 0 ? AppStyles.list-row-even : AppStyles.list-row-odd;
                         border-radius: 8px;
                         width: 100%;
                         
                         // Effet hover
                         touch-area := TouchArea {
                             Rectangle {
-                                background: touch-area.has-hover ? rgba(255, 255, 255, 0.15) : transparent;
+                                background: touch-area.has-hover ? AppStyles.list-row-hover : transparent;
                                 border-radius: 8px;
                             }
                         }
@@ -402,7 +398,6 @@ export component SalesView inherits VerticalLayout {
                             spacing: 5px;
                             padding: 10px;
 
-                            // Ligne principale
                             HorizontalLayout {
                                 spacing: 10px;
                                 padding-left: 15px;
@@ -413,7 +408,7 @@ export component SalesView inherits VerticalLayout {
                                     min-width: 150px;
                                     Text { 
                                         text: sale.sale_number; 
-                                        color: white; 
+                                        color: AppTheme.text-primary; 
                                         vertical-alignment: center;
                                     }
                                 }
@@ -422,7 +417,7 @@ export component SalesView inherits VerticalLayout {
                                     min-width: 200px;
                                     Text { 
                                         text: sale.date; 
-                                        color: white; 
+                                        color: AppTheme.text-primary; 
                                         horizontal-alignment: center; 
                                         vertical-alignment: center;
                                     }
@@ -432,7 +427,7 @@ export component SalesView inherits VerticalLayout {
                                     min-width: 150px;
                                     Text { 
                                         text: sale.total_amount; 
-                                        color: #2ed573;
+                                        color: AppTheme.state-success;
                                         horizontal-alignment: center; 
                                         vertical-alignment: center;
                                         font-weight: 700; 
@@ -443,7 +438,7 @@ export component SalesView inherits VerticalLayout {
                                     min-width: 100px;
                                     Text { 
                                         text: sale.items_count + " art."; 
-                                        color: white;
+                                        color: AppTheme.text-primary;
                                         horizontal-alignment: center; 
                                         vertical-alignment: center;
                                     }
@@ -467,7 +462,7 @@ export component SalesView inherits VerticalLayout {
 
                             // Détails des articles 
                             if sale.show_details : Rectangle {
-                                background: rgba(0, 0, 0, 0.1);
+                                background: AppTheme.background-overlay-dark;
                                 border-radius: 5px;
                                 VerticalLayout {
                                     spacing: 5px;
@@ -479,22 +474,22 @@ export component SalesView inherits VerticalLayout {
                                         Text {
                                             text: "• " + item.product_name;
                                             width: 40%;
-                                            color: #BDBDBD;
+                                            color: AppTheme.text-muted;
                                         }
                                         Text {
                                             text: item.quantity + " x " + item.unit_price;
                                             width: 30%;
-                                            color: #BDBDBD;
+                                            color: AppTheme.text-muted;
                                         }
                                         Text {
                                             text: "= " + item.total_price;
                                             width: 30%;
                                             horizontal-alignment: right;
-                                            color: #BDBDBD;
+                                            color: AppTheme.text-muted;
                                         }
                                     }
                                 }
-                        }
+                            }
                         }
                     }
                 }

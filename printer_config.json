@@ -1,0 +1,18 @@
+{
+  "printers": [
+    {
+      "name": "Imprimante par défaut (USB)",
+      "port": "/dev/ttyUSB0",
+      "printer_type": "USB",
+      "paper_width": 48,
+      "is_default": false
+    },
+    {
+      "name": "dzaezretr",
+      "port": "USB",
+      "printer_type": "USB",
+      "paper_width": 48,
+      "is_default": true
+    }
+  ]
+}

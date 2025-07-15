@@ -1,0 +1,111 @@
+// src/ui/theme/colors.slint
+
+// Système de thème centralisé pour l'application
+
+export global AppTheme {
+    // === COULEURS DE BASE (toujours de type color) ===
+    out property <color> primary-gradient-start: #667eea;
+    out property <color> primary-gradient-end: #764ba2;
+    out property <color> accent-gradient-start: #ff6b6b;
+    out property <color> accent-gradient-end: #ee5c17;
+    
+    // === COULEURS DE FOND (solides) ===
+    out property <color> background-overlay-light: rgba(255, 255, 255, 0.15);
+    out property <color> background-overlay-medium: rgba(255, 255, 255, 0.12);
+    out property <color> background-overlay-dark: rgba(255, 255, 255, 0.1);
+    out property <color> background-content: rgba(255, 255, 255, 0.08);
+
+    // === COULEURS HARMONISÉES POUR LES LISTES ===
+    out property <color> list-header-background: rgba(255, 255, 255, 0.15);
+    out property <color> list-row-even: rgba(255, 255, 255, 0.08);
+    out property <color> list-row-odd: rgba(255, 255, 255, 0.05);
+    out property <color> list-row-hover: rgba(255, 255, 255, 0.12);
+    out property <color> list-container-background: rgba(255, 255, 255, 0.06);
+    
+    // === COULEURS POUR LES CARTES ET CONTENEURS ===
+    out property <color> card-background: rgba(255, 255, 255, 0.07);
+    out property <color> container-background: rgba(255, 255, 255, 0.05);
+    out property <color> section-background: rgba(255, 255, 255, 0.08);
+    
+    // === PINCEAUX DE FOND (pour les dégradés) ===
+    out property <brush> background-main-brush: @linear-gradient(145deg, self.primary-gradient-start 0%, self.primary-gradient-end 100%);
+    out property <brush> accent-brush: @linear-gradient(45deg, self.accent-gradient-start 0%, self.accent-gradient-end 100%);
+
+
+    // === COULEURS DE TEXTE ===
+    out property <color> text-primary: #ffffff;
+    out property <color> text-secondary: rgba(255, 255, 255, 0.9); // Blanc presque pur
+    out property <color> text-muted: rgba(255, 255, 255, 0.7); // Plus contrasté
+    out property <color> text-disabled: rgba(255, 255, 255, 0.3);    
+    
+    // === COULEURS DES BORDURES ===
+    out property <color> border-light: rgba(255, 255, 255, 0.15);
+    out property <color> border-medium: rgba(255, 255, 255, 0.2);
+    out property <color> border-dark: rgba(255, 255, 255, 0.25);
+    
+    // === COULEURS DES OMBRES ===
+    out property <color> shadow-light: rgba(0, 0, 0, 0.1);
+    out property <color> shadow-medium: rgba(0, 0, 0, 0.15);
+    out property <color> shadow-dark: rgba(0, 0, 0, 0.2);
+
+    // === COULEURS D'ÉTAT ===
+    out property <color> state-success: #2ed573;
+    out property <color> state-warning: #ffa801;
+    out property <color> state-error: #ff4757;
+    out property <color> state-info: #00e5ff; 
+
+    out property <color> state-error-light: #ffcccb;     // Rose pâle
+    out property <color> state-success-light: #90ee90;   // Vert clair  
+    out property <color> state-warning-light: #ffd700;   // Or
+    out property <color> state-info-light: #87ceeb;      // Bleu ciel
+
+    //des couleurs spécifiques pour les messages d'erreur/succès
+    out property <color> message-error-bg: #2c1810;      // Fond sombre pour erreur
+    out property <color> message-error-border: #ff6b6b;  // Bordure rouge vif
+    out property <color> message-error-text: #ff9999;    // Texte rouge clair
+
+    out property <color> message-success-bg: #1a2f1a;    // Fond sombre pour succès
+    out property <color> message-success-border: #4caf50; // Bordure verte vif
+    out property <color> message-success-text: #81c784;   // Texte vert clair
+
+    out property <color> message-warning-bg: #2d2416;     // Fond sombre pour avertissement
+    out property <color> message-warning-border: #ffc107; // Bordure orange vif
+    out property <color> message-warning-text: #ffcc80;   // Texte orange clair
+
+    out property <color> message-info-bg: #1a2332;        // Fond sombre pour info
+    out property <color> message-info-border: #00e5ff;    // Bordure cyan vif
+    out property <color> message-info-text: #4dd0e1;      // Texte cyan clair
+
+    // === FONCTION UTILITAIRE ===
+    public pure function with-alpha(color: color, alpha: float) -> color {
+        return color.with-alpha(alpha);
+    }
+}
+
+// === STYLES PRÉDÉFINIS (pour une utilisation facile) ===
+export global AppStyles {
+    // Styles de conteneurs 
+    out property <brush> container-main: AppTheme.background-main-brush;
+    out property <color> container-card: AppTheme.card-background;
+    out property <color> container-section: AppTheme.section-background;
+    out property <brush> button-primary-gradient: AppTheme.background-main-brush;
+    
+    // Styles de listes
+    out property <color> list-container: AppTheme.list-container-background;
+    out property <color> list-header: AppTheme.list-header-background;
+    out property <color> list-row-even: AppTheme.list-row-even;
+    out property <color> list-row-odd: AppTheme.list-row-odd;
+    out property <color> list-row-hover: AppTheme.list-row-hover;
+    
+    // Styles de texte
+    out property <color> text-title: AppTheme.text-primary;
+    out property <color> text-body: AppTheme.text-secondary;
+    out property <color> text-caption: AppTheme.text-muted;
+    
+    // Styles numériques
+    out property <length> shadow-blur: 15px;
+    out property <length> border-radius: 12px;
+    out property <duration> animation-duration: 250ms;
+    out property <easing> animation-ease: ease-in-out;
+
+}

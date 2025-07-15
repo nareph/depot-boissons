@@ -1,18 +1,23 @@
 // src/ui/components/menu_item.slint
 
 import { HorizontalBox } from "std-widgets.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
 
 export component MenuItem inherits Rectangle {
     in property <string> text;
-    in property <color> text_color: white;
+    in property <color> text_color: AppTheme.text-primary;
     callback clicked;
 
     height: 40px;
     
-    // On met un fond transparent par défaut
-    // et on le change uniquement au survol
-    background: area.has-hover ? rgba(255, 255, 255, 0.1) : transparent;
-    animate background { duration: 200ms; }
+    // Fond transparent par défaut avec effet hover
+    background: area.has-hover ? 
+        AppTheme.background-overlay-light : 
+        transparent;
+    animate background { 
+        duration: 200ms; 
+        easing: AppStyles.animation-ease; 
+    }
 
     area := TouchArea {
         mouse-cursor: pointer;
