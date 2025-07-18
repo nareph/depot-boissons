@@ -1,0 +1,183 @@
+import { Button, ComboBox, ProgressIndicator, HorizontalBox, VerticalBox, ScrollView } from "std-widgets.slint";
+import { ModernCard } from "../components/card.slint";
+import { AppTheme, AppStyles } from "../theme/colors.slint";
+
+export struct ReportKPI {
+    title: string,
+    value: string,
+    icon: string,
+}
+
+export struct TopProductUI {
+    rank: string,
+    name: string,
+    quantity: string,
+}
+
+
+export component ReportingView inherits VerticalLayout {
+    in property <[ReportKPI]> kpis;
+    in property <[TopProductUI]> top_products;
+    in property <bool> is_loading: false;
+    in-out property <int> selected_period_index: 0;
+
+    callback request_report_data(string);
+    callback export_pdf_clicked();
+    callback export_excel_clicked();
+
+    padding: 20px;
+    spacing: 20px;
+
+    // --- En-tête ---
+    HorizontalLayout {
+        spacing: 20px;
+        alignment: stretch;
+        
+        Text { 
+            text: "📊 Rapport des Ventes";
+            font-size: 28px;
+            font-weight: 700;
+            color: AppTheme.text-primary;
+        }
+        
+        Rectangle { }
+        
+        ComboBox {
+            height: 40px;
+            model: ["7 derniers jours", "30 derniers jours", "Cette année"];
+            current-index <=> root.selected_period_index;
+            selected => {
+                root.request_report_data(
+                    self.current-index == 0 ? "7d" : 
+                    (self.current-index == 1 ? "30d" : "year")
+                );
+            }
+        }
+        
+        HorizontalLayout {
+            spacing: 10px;
+            Button { 
+                text: "📄 Exporter PDF"; 
+                height: 40px;
+                enabled: !root.is_loading;
+                clicked => { root.export_pdf_clicked(); }
+            }
+            Button {
+                text: "📊 Exporter Excel";
+                height: 40px;
+                primary: true;
+                enabled: !root.is_loading;
+                clicked => { root.export_excel_clicked(); }
+            }
+        }
+    }
+
+    // --- Indicateur de chargement ---
+    if root.is_loading : HorizontalLayout {
+        alignment: center;
+        spacing: 10px;
+        ProgressIndicator { 
+            width: 30px;
+            height: 30px;
+            indeterminate: true; 
+        }
+        Text { 
+            text: "Chargement des données..."; 
+            font-size: 16px;
+            color: AppTheme.text-secondary; 
+        }
+    }
+
+    // --- Contenu principal ---
+    if !root.is_loading : VerticalLayout {
+        spacing: 20px;
+        
+        // --- Cartes de statistiques ---
+        HorizontalLayout {
+            spacing: 20px;
+            height: 180px;
+            
+            for kpi in root.kpis: ModernCard {
+                title: kpi.title;
+                value: kpi.value;
+                icon: kpi.icon;
+                accent_color:  kpi.title=="Chiffre d'Affaires" ? AppTheme.state-success :
+                              (kpi.title == "Ventes Totales" ? AppTheme.state-info : AppTheme.state-warning);
+                         }
+        }
+        
+        // --- Tableau des produits ---
+        Rectangle {
+            background: AppStyles.container-section;
+            border-radius: AppStyles.border-radius-md;
+            clip: true;
+
+            VerticalBox {
+                padding: 25px;
+                spacing: 15px;
+
+                // En-tête de la section
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "🏆"; font-size: 24px; }
+                    Text {
+                        text: "Top 5 Produits Vendus";
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: AppTheme.text-primary;
+                    }
+                }
+
+                // Conteneur de la liste 
+                Rectangle {
+                    background: AppStyles.list-container;
+                    border-radius: AppStyles.border-radius-md;
+                    clip: true;
+
+                    ScrollView {
+                        VerticalBox {
+                            spacing: 2px;
+                            padding: 10px;
+
+                            for product[index] in root.top_products: Rectangle {
+                                height: 50px;
+                                background: mod(index, 2) == 0 ? AppStyles.list-row-even : AppStyles.list-row-odd;
+                                border-radius: 8px;
+                                
+                                // Effet de survol 
+                                touch-area := TouchArea {
+                                    Rectangle {
+                                        background: touch-area.has-hover ? AppStyles.list-row-hover : transparent;
+                                        border-radius: 8px;
+                                    }
+                                }
+                                
+                                HorizontalBox {
+                                    padding: 15px;
+                                    alignment: space-between;
+                                    Text {
+                                        text: product.rank;
+                                        font-weight: 600;
+                                        color: AppTheme.text-primary;
+                                        width: 50px;
+                                    }
+                                    Text {
+                                        text: product.name;
+                                        font-weight: 500;
+                                        color: AppTheme.text-primary;
+                                    }
+                                    Text {
+                                        text: product.quantity;
+                                        color: AppTheme.state-success;
+                                        font-weight: 600;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+     
+    }
+}

@@ -65,7 +65,7 @@ export component ProductsView inherits VerticalLayout {
     Rectangle {
         height: 60px;
         background: AppTheme.background-overlay-medium;
-        border-radius: AppStyles.border-radius;
+        border-radius: AppStyles.border-radius-md;
         
         HorizontalLayout {
             padding: 15px;
@@ -248,13 +248,13 @@ export component ProductsView inherits VerticalLayout {
     // Conteneur principal de la liste 
     Rectangle {
         background: AppStyles.list-container;
-        border-radius: AppStyles.border-radius;
+        border-radius: AppStyles.border-radius-md;
         clip: true;
 
         if root.products_model.length == 0 : Rectangle {
             height: 200px;
             background: AppTheme.background-overlay-dark;
-            border-radius: AppStyles.border-radius;
+            border-radius: AppStyles.border-radius-md;
             
             VerticalLayout {
                 alignment: center;

@@ -4,6 +4,7 @@
 pub mod dashboard_queries;
 pub mod password_queries;
 pub mod product_queries;
+pub mod reporting_queries;
 pub mod sale_queries;
 pub mod user_queries;
 
@@ -11,6 +12,7 @@ pub mod user_queries;
 pub use dashboard_queries::*;
 pub use password_queries::*;
 pub use product_queries::*;
+pub use reporting_queries::*;
 pub use sale_queries::*;
 pub use user_queries::*;
 

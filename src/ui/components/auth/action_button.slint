@@ -11,7 +11,7 @@ export component ActionButton inherits Rectangle {
     background: root.enabled && !root.loading ? 
                AppStyles.button-primary-gradient :
                AppTheme.with-alpha(AppTheme.primary-gradient-start, 0.5);
-    border-radius: AppStyles.border-radius;
+    border-radius: AppStyles.border-radius-md;
     animate background { 
         duration: AppStyles.animation-duration;
         easing: AppStyles.animation-ease;

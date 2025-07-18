@@ -4,6 +4,7 @@ use bcrypt::BcryptError;
 use bigdecimal::ParseBigDecimalError;
 use diesel::ConnectionError;
 use diesel::result::Error as DieselError;
+use rust_xlsxwriter::XlsxError;
 use slint::PlatformError;
 use std::error::Error as StdError;
 use std::fmt;
@@ -39,6 +40,8 @@ pub enum AppError {
     /// Erreur liée à l'impression
     PrintingError(String),
 
+    ExcelGeneration(XlsxError),
+
     /// Erreur générique pour les messages d'erreur personnalisés créés dans notre code.
     Generic(String),
 }
@@ -54,6 +57,7 @@ impl fmt::Display for AppError {
             AppError::ValidationError(e) => write!(f, "Erreur de validation: {}", e),
             AppError::Unauthorized(msg) => write!(f, "Erreur d'autorisation : {}", msg),
             AppError::Io(err) => write!(f, "Erreur d'entrée/sortie : {}", err),
+            AppError::ExcelGeneration(err) => write!(f, "Erreur de génération Excel : {}", err),
             AppError::PrintingError(msg) => write!(f, "Erreur d'impression : {}", msg),
             AppError::Generic(msg) => write!(f, "Erreur : {}", msg),
         }
@@ -67,6 +71,7 @@ impl StdError for AppError {
             AppError::Database(err) => Some(err.as_ref()),
             AppError::Platform(err) => Some(err),
             AppError::Io(err) => Some(err),
+            AppError::ExcelGeneration(err) => Some(err),
             AppError::Seeding(_)
             | AppError::Authentication(_)
             | AppError::Unauthorized(_)
@@ -159,5 +164,11 @@ impl From<escpos_rs::Error> for AppError {
 impl From<serialport::Error> for AppError {
     fn from(err: serialport::Error) -> Self {
         AppError::PrintingError(err.to_string())
+    }
+}
+
+impl From<XlsxError> for AppError {
+    fn from(err: XlsxError) -> Self {
+        AppError::ExcelGeneration(err)
     }
 }

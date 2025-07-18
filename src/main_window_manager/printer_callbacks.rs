@@ -145,6 +145,8 @@ fn clear_notifications(ui_handle: &Weak<MainWindow>) {
 
 /// Configure tous les callbacks pour la gestion des imprimantes
 pub fn setup(main_window_handle: &Weak<MainWindow>) {
+    let ui = main_window_handle.upgrade().unwrap();
+
     setup_load_printers_callback(main_window_handle);
     setup_add_printer_callback(main_window_handle);
     setup_remove_printer_callback(main_window_handle);
@@ -153,6 +155,9 @@ pub fn setup(main_window_handle: &Weak<MainWindow>) {
     setup_clear_notifications_callback(main_window_handle);
     setup_port_suggestions_callback(main_window_handle);
     setup_help_message_callback(main_window_handle);
+
+    // Charger les imprimantes au démarrage
+    ui.invoke_load_printers();
 }
 
 /// Configure le callback pour charger les imprimantes

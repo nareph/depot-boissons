@@ -15,7 +15,7 @@ export global AppTheme {
     out property <color> background-overlay-dark: rgba(255, 255, 255, 0.1);
     out property <color> background-content: rgba(255, 255, 255, 0.08);
 
-    // === COULEURS HARMONISÉES POUR LES LISTES ===
+    // === COULEURS POUR LES LISTES ===
     out property <color> list-header-background: rgba(255, 255, 255, 0.15);
     out property <color> list-row-even: rgba(255, 255, 255, 0.08);
     out property <color> list-row-odd: rgba(255, 255, 255, 0.05);
@@ -104,8 +104,18 @@ export global AppStyles {
     
     // Styles numériques
     out property <length> shadow-blur: 15px;
-    out property <length> border-radius: 12px;
     out property <duration> animation-duration: 250ms;
     out property <easing> animation-ease: ease-in-out;
+
+    // --- RAYONS DE BORDURE ---
+    out property <length> border-radius-sm: 8px;
+    out property <length> border-radius-md: 12px;
+    out property <length> border-radius-lg: 16px;
+
+    // --- TAILLES DE POLICE ---
+    out property <length> font-size-h1: 28px;
+    out property <length> font-size-h2: 20px;
+    out property <length> font-size-body: 14px;
+    out property <length> font-size-caption: 12px;
 
 }

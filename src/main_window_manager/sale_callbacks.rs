@@ -623,6 +623,12 @@ fn show_new_sale_dialog(main_ui: &ui::MainWindow, current_user_id: Uuid) {
                         if let Some(main_ui) = main_ui_weak.upgrade() {
                             main_ui.invoke_request_sales();
 
+                            // Rafraîchir automatiquement le dashboard
+                            main_ui.invoke_refresh_dashboard();
+
+                            // Rafraîchir automatiquement du rapport de vente
+                            main_ui.invoke_request_report_data("7d".into());
+
                             // Afficher automatiquement le ticket de caisse
                             show_receipt_dialog(receipt);
                         }

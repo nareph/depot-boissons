@@ -10,6 +10,7 @@ import { SalesView } from "./views/sales.slint";
 import { UsersView } from "./views/users.slint";
 import { LowStockProductUI, ProductUI, UserUI, SaleUI } from "./components/models.slint";
 import { PrinterConfigOverlay, PrinterUI, PrinterErrorUI, PrinterSuccessUI, PrinterTestResultUI } from "./views/printer_config.slint";
+import { ReportingView, ReportKPI, TopProductUI } from "./views/reporting_view.slint"; 
 
 // Import du thème
 import { AppTheme, AppStyles } from "./theme/colors.slint";
@@ -28,6 +29,8 @@ export component MainWindow inherits Window {
     in property <string> today_revenue;
     in property <string> today_sales_count;
     in property <[LowStockProductUI]> low_stock_products_model;
+    in-out property <bool> dashboard_loading: false;
+
     
     // Propriétés pour les produits, utilisateurs, ventes...
     in property <[ProductUI]> products_model;
@@ -69,9 +72,17 @@ export component MainWindow inherits Window {
     in-out property <[string]> printer_port_suggestions: [];
     in-out property <string> printer_help_message: "";
     in-out property <bool> is_adding_printer: false;
+
+     // === PROPRIÉTÉS POUR LES RAPPORTS ===
+    in property <[ReportKPI]> report_kpis;
+    in property <[TopProductUI]> report_top_products;
+    in property <bool> report_is_loading: false;
+    in-out property <int> report_selected_period_index: 0;
+
     
     // Callbacks
     callback request_dashboard_data();
+    callback refresh_dashboard();
     callback request_products();
     callback request_users();
     callback request_sales();
@@ -116,6 +127,11 @@ export component MainWindow inherits Window {
     callback set_printer_success(PrinterSuccessUI);
     callback set_printer_test_result(PrinterTestResultUI);
 
+    // === CALLBACKS POUR LES RAPPORTS ===
+    callback request_report_data(string);
+    callback export_pdf_clicked();
+    callback export_excel_clicked();
+
     property <int> current_view_index: 0;
     
     // Conteneur principal 
@@ -132,7 +148,7 @@ export component MainWindow inherits Window {
             Rectangle {
                 height: 60px;
                 background: AppTheme.background-overlay-light;
-                border-radius: AppStyles.border-radius;
+                border-radius: AppStyles.border-radius-md;
                 drop-shadow-blur: AppStyles.shadow-blur;
                 drop-shadow-color: AppTheme.shadow-medium;
                 
@@ -152,7 +168,7 @@ export component MainWindow inherits Window {
             // Contenu principal
             Rectangle {
                 background: AppTheme.background-overlay-medium;
-                border-radius: AppStyles.border-radius;
+                border-radius: AppStyles.border-radius-md;
                 drop-shadow-blur: AppStyles.shadow-blur;
                 drop-shadow-color: AppTheme.shadow-medium;
                 
@@ -164,7 +180,7 @@ export component MainWindow inherits Window {
                     Rectangle {
                         width: 250px;
                         background: AppTheme.background-overlay-dark;
-                        border-radius: AppStyles.border-radius;
+                        border-radius: AppStyles.border-radius-md;
                         
                         AppSidebar {
                             width: 100%;
@@ -178,7 +194,7 @@ export component MainWindow inherits Window {
                     // Zone de contenu principal
                     Rectangle {
                         background: AppTheme.background-content;
-                        border-radius: AppStyles.border-radius;
+                        border-radius: AppStyles.border-radius-md;
                         border-width: 1px;
                         border-color: AppTheme.border-light;
                         
@@ -195,6 +211,10 @@ export component MainWindow inherits Window {
                                 today_revenue: root.today_revenue;
                                 today_sales_count: root.today_sales_count;
                                 low_stock_products_model: root.low_stock_products_model;
+                                dashboard_loading: root.dashboard_loading;
+                                refresh_requested => {
+                                    root.refresh_dashboard();
+                                }
                             }
                         }
                         
@@ -273,6 +293,17 @@ export component MainWindow inherits Window {
                                 change_page(page) => { root.user_change_page(page); }
                                 change_page_size(page_size) => { root.user_change_page_size(page_size); }
                             }
+                        }
+
+                        if root.current_view_index == 4 && root.is_admin: ReportingView {
+                            kpis: root.report_kpis;
+                            top_products: root.report_top_products;
+                            is_loading: root.report_is_loading;
+                            selected_period_index <=> root.report_selected_period_index;
+                            
+                            request_report_data(period) => { root.request_report_data(period); }
+                            export_pdf_clicked => { root.export_pdf_clicked(); }
+                            export_excel_clicked => { root.export_excel_clicked(); }
                         }
                     }
                 }

@@ -68,7 +68,7 @@ export component UsersView inherits VerticalLayout {
     Rectangle {
         height: 60px;
         background: AppTheme.background-overlay-medium;
-        border-radius: AppStyles.border-radius;
+        border-radius: AppStyles.border-radius-md;
         
         HorizontalLayout {
             padding: 15px;
@@ -260,14 +260,14 @@ export component UsersView inherits VerticalLayout {
     // Conteneur principal de la liste
     Rectangle {
         background: AppStyles.list-container;
-        border-radius: AppStyles.border-radius;
+        border-radius: AppStyles.border-radius-md;
         clip: true;
 
         // Message si pas de données
         if root.users_model.length == 0 : Rectangle {
             height: 200px;
             background: AppTheme.background-overlay-dark;
-            border-radius: AppStyles.border-radius;
+            border-radius: AppStyles.border-radius-md;
             
             VerticalLayout {
                 alignment: center;
@@ -304,7 +304,7 @@ export component UsersView inherits VerticalLayout {
         // Tableau des utilisateurs
         if root.users_model.length > 0 : Rectangle {
             //background: AppTheme.background-overlay-medium;
-            border-radius: AppStyles.border-radius;
+            border-radius: AppStyles.border-radius-md;
             clip: true;
 
             ScrollView {

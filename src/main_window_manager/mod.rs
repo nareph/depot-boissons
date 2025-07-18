@@ -4,6 +4,7 @@
 mod dashboard_callbacks;
 mod printer_callbacks;
 mod product_callbacks;
+mod reporting_callbacks;
 mod sale_callbacks;
 mod user_callbacks;
 
@@ -93,11 +94,9 @@ fn setup_callbacks(
     // Configuration des callbacks pour les imprimantes
     printer_callbacks::setup(&main_window_handle);
 
-    // Charger les imprimantes au démarrage
-    main_window.invoke_load_printers();
-
     if user.role == "Admin" {
         user_callbacks::setup(&main_window_handle, user.id);
+        reporting_callbacks::setup(&main_window_handle);
     }
 }
 

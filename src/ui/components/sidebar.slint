@@ -44,12 +44,20 @@ export component AppSidebar inherits Rectangle {
                 is_active: root.current_view_index == 2; 
                 clicked => { root.view-changed(2); } 
             }
+            // Les vues réservées aux admins sont groupées ici
             if root.is_admin: ModernButton { 
-                text: "Utilisateurs"; 
-                icon: "👥"; 
-                is_active: root.current_view_index == 3; 
-                clicked => { root.view-changed(3); } 
+                    text: "Utilisateurs"; 
+                    icon: "👥"; is_active: 
+                    root.current_view_index == 3; 
+                    clicked => { root.view-changed(3); } 
             }
+            if root.is_admin:  ModernButton { 
+                text: "Rapports"; 
+                icon: "📈"; 
+                is_active: root.current_view_index == 4; 
+                clicked => { root.view-changed(4); } 
+            }
+            
         }
     }
 }

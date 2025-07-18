@@ -1,5 +1,5 @@
 // src/ui/views/dashboard.slint
-import { VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+import { VerticalBox, HorizontalBox, ScrollView, Button } from "std-widgets.slint";
 import { ModernCard } from "../components/card.slint";
 import { LowStockProductUI } from "../components/models.slint";
 import { AppTheme, AppStyles } from "../theme/colors.slint";
@@ -8,16 +8,33 @@ export component DashboardView inherits VerticalLayout {
     in property <string> today_revenue;
     in property <string> today_sales_count;
     in property <[LowStockProductUI]> low_stock_products_model;
+    in property <bool> dashboard_loading: false;
+    
+    callback refresh_requested();
 
     spacing: 20px;
     padding: 20px;
 
-    // 1. Titre
-    Text {
-        text: "Aperçu de la journée";
-        font-size: 28px;
-        font-weight: 700;
-        color: AppTheme.text-primary;
+    // 1. En-tête avec titre et bouton rafraîchir
+    HorizontalBox {
+        spacing: 20px;
+        alignment: space-between;
+        
+        Text {
+            text: "Aperçu de la journée";
+            font-size: 28px;
+            font-weight: 700;
+            color: AppTheme.text-primary;
+        }
+        
+        Button {
+            text: root.dashboard_loading ? "Chargement..." : "🔄 Rafraîchir";
+            enabled: !root.dashboard_loading;
+            
+            clicked => {
+                root.refresh_requested();
+            }
+        }
     }
 
     // 2. Conteneur des cartes
@@ -48,7 +65,7 @@ export component DashboardView inherits VerticalLayout {
     // 3. Section stock faible 
     Rectangle {
         background: AppStyles.container-section;
-        border-radius: AppStyles.border-radius;
+        border-radius: AppStyles.border-radius-md;
         clip: true;
 
         VerticalBox {
@@ -57,20 +74,39 @@ export component DashboardView inherits VerticalLayout {
 
             // En-tête de la section
             HorizontalBox {
-                spacing: 10px;
-                Text { text: "⚠️"; font-size: 24px; }
-                Text {
-                    text: "Produits à Stock Faible";
+                spacing: 15px;
+                alignment: space-between;
+                
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "⚠️"; font-size: 24px; }
+                    Text {
+                        text: "Produits à Stock Faible";
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: AppTheme.text-primary;
+                    }
+                }
+                
+                if root.dashboard_loading: Text {
+                    text: "●";
                     font-size: 20px;
-                    font-weight: 600;
-                    color: AppTheme.text-primary;
+                    color: AppTheme.primary-gradient-start;
+                    
+                    // Animation de pulsation simple
+                    animate opacity {
+                        duration: 1000ms;
+                        iteration-count: -1;
+                        easing: ease-in-out;
+                    }
+                    opacity: 0.3;
                 }
             }
 
             // Conteneur de la liste 
             Rectangle {
                 background: AppStyles.list-container;
-                border-radius: AppStyles.border-radius;
+                border-radius: AppStyles.border-radius-md;
                 clip: true;
 
                 ScrollView {
@@ -78,10 +114,27 @@ export component DashboardView inherits VerticalLayout {
                         spacing: 2px;
                         padding: 10px;
 
+                        // Message de chargement
+                        if root.dashboard_loading: Rectangle {
+                            height: 60px;
+                            background: AppStyles.list-row-even;
+                            border-radius: 8px;
+                            
+                            Text {
+                                text: "Mise à jour des données...";
+                                font-size: 16px;
+                                color: AppTheme.text-secondary;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        // Liste des produits
                         for item[index] in root.low_stock_products_model: Rectangle {
                             height: 50px;
                             background: mod(index, 2) == 0 ? AppStyles.list-row-even : AppStyles.list-row-odd;
                             border-radius: 8px;
+                            opacity: root.dashboard_loading ? 0.3 : 1.0;
                             
                             // Effet de survol 
                             touch-area := TouchArea {
