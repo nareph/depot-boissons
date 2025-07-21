@@ -1,62 +1,74 @@
--- up.sql 
--- Créer une fonction pour mettre à jour automatiquement le champ 'updated_at'
-CREATE OR REPLACE FUNCTION trigger_set_timestamp() RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- up.sql (Syntaxe pour SQLite)
 
 -- Table des utilisateurs
 CREATE TABLE users (
-    id UUID PRIMARY KEY,
+    id TEXT PRIMARY KEY NOT NULL, -- UUID stocké comme TEXT
     password TEXT NOT NULL,
     name TEXT NOT NULL UNIQUE,
     role TEXT NOT NULL,
-    must_change_password BOOLEAN NOT NULL DEFAULT FALSE, 
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    must_change_password INTEGER NOT NULL DEFAULT 0, -- BOOLEAN devient INTEGER
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, -- TIMESTAMPTZ devient TEXT
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TRIGGER set_timestamp BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
 
--- Table des produits finis (SKU)
+-- Trigger pour mettre à jour 'updated_at' sur la table users
+CREATE TRIGGER trigger_users_updated_at AFTER UPDATE ON users
+BEGIN
+    UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+-- Table des produits
 CREATE TABLE products (
-    id UUID PRIMARY KEY,
-    name TEXT NOT NULL, -- ex: "Isenbeck", "Supermont"
-    packaging_description TEXT NOT NULL, -- ex: "Casier 65cl de 12", "Palette 1.5L de 12"
-    sku TEXT UNIQUE, -- ex: "ISEN-65-CAS12". Code unique pour la gestion. Optionnel mais recommandé.
-    stock_in_sale_units INT NOT NULL DEFAULT 0, -- Le stock en casiers, palettes, etc.
-    price_per_sale_unit NUMERIC(10, 2) NOT NULL, -- Le prix de vente d'un casier, d'une palette...
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    -- Un produit avec un certain packaging ne peut exister qu'une fois
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    packaging_description TEXT NOT NULL,
+    sku TEXT UNIQUE,
+    stock_in_sale_units INTEGER NOT NULL DEFAULT 0, -- INT devient INTEGER
+    price_per_sale_unit TEXT NOT NULL, -- NUMERIC devient TEXT pour la précision
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (name, packaging_description)
 );
-CREATE TRIGGER set_timestamp BEFORE UPDATE ON products FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
 
--- Table des ventes (l'en-tête de la facture)
+CREATE TRIGGER trigger_products_updated_at AFTER UPDATE ON products
+BEGIN
+    UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+-- Table des ventes
 CREATE TABLE sales (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT, -- L'utilisateur qui a créé la vente
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL, -- La contrainte de clé étrangère est ajoutée plus tard
     sale_number TEXT NOT NULL UNIQUE,
-    total_amount NUMERIC(10, 2) NOT NULL,
-    date TIMESTAMPTZ NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    total_amount TEXT NOT NULL,
+    date TEXT NOT NULL, -- TIMESTAMPTZ devient TEXT
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
 );
-CREATE TRIGGER set_timestamp BEFORE UPDATE ON sales FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
--- Index pour accélérer la recherche des ventes par utilisateur
-CREATE INDEX idx_sales_user_id ON sales (user_id); 
 
--- Table des articles de vente 
+CREATE TRIGGER trigger_sales_updated_at AFTER UPDATE ON sales
+BEGIN
+    UPDATE sales SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE INDEX idx_sales_user_id ON sales (user_id);
+
+-- Table des articles de vente
 CREATE TABLE sale_items (
-    id UUID PRIMARY KEY,
-    sale_id UUID NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
-    product_id UUID NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
-    quantity INT NOT NULL, -- Quantité en unités de vente (ex: 2 casiers, 3 palettes)
-    unit_price NUMERIC(10, 2) NOT NULL, -- Prix du casier/palette au moment de la vente
-    total_price NUMERIC(10, 2) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id TEXT PRIMARY KEY NOT NULL,
+    sale_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    quantity INTEGER NOT NULL,
+    unit_price TEXT NOT NULL,
+    total_price TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
 );
-CREATE TRIGGER set_timestamp BEFORE UPDATE ON sale_items FOR EACH ROW EXECUTE PROCEDURE trigger_set_timestamp();
+
+CREATE TRIGGER trigger_sale_items_updated_at AFTER UPDATE ON sale_items
+BEGIN
+    UPDATE sale_items SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;

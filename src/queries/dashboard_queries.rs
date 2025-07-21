@@ -17,19 +17,35 @@ pub fn get_today_sales_summary() -> AppResult<(BigDecimal, i64)> {
     let start_of_day_utc = today_utc_naive.and_hms_opt(0, 0, 0).unwrap();
     let end_of_day_utc = today_utc_naive.and_hms_opt(23, 59, 59).unwrap();
 
+    // Formatage des dates pour SQLite (String)
+    let start_of_day_str = start_of_day_utc.format("%Y-%m-%d %H:%M:%S%.f").to_string();
+    let end_of_day_str = end_of_day_utc.format("%Y-%m-%d %H:%M:%S%.f").to_string();
+
     log::info!(
         "Calcul du résumé des ventes entre {} et {}",
-        start_of_day_utc,
-        end_of_day_utc
+        start_of_day_str,
+        end_of_day_str
     );
 
-    let summary = sales
-        .filter(date.between(start_of_day_utc, end_of_day_utc))
-        .select((sum(total_amount), count(id)))
-        .first::<(Option<BigDecimal>, i64)>(&mut conn)?;
+    // Pour SQLite, nous devons faire la somme et conversion manuellement
+    // car total_amount est maintenant un String
+    let sales_data = sales
+        .filter(date.between(&start_of_day_str, &end_of_day_str))
+        .select((total_amount, id))
+        .load::<(String, String)>(&mut conn)?;
 
-    let total_revenue = summary.0.unwrap_or_else(|| BigDecimal::from(0));
-    let sales_count = summary.1;
+    let mut total_revenue = BigDecimal::from(0);
+    let sales_count = sales_data.len() as i64;
+
+    // Conversion manuelle et somme des montants
+    for (amount_str, _) in sales_data {
+        match amount_str.parse::<BigDecimal>() {
+            Ok(amount) => total_revenue += amount,
+            Err(e) => {
+                log::warn!("Erreur lors du parsing du montant '{}': {}", amount_str, e);
+            }
+        }
+    }
 
     Ok((total_revenue, sales_count))
 }

@@ -10,9 +10,8 @@ use crate::{
     schema::{products, sale_items, sales, users},
 };
 use bigdecimal::BigDecimal;
-use chrono::Utc;
+use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
-use uuid::Uuid;
 
 // Allow columns from sales and users tables to appear in the same GROUP BY clause
 diesel::allow_columns_to_appear_in_same_group_by_clause!(
@@ -31,7 +30,7 @@ diesel::allow_columns_to_appear_in_same_group_by_clause!(
 #[derive(Debug, Clone)]
 pub struct SaleSearchParams {
     /// Si Some(user_id), filtre par cet utilisateur. Si None, ne filtre pas (pour les admins).
-    pub user_id_filter: Option<Uuid>,
+    pub user_id_filter: Option<String>, // Changed from Uuid to String
     /// Filtre par numéro de vente ou nom d'utilisateur.
     pub search_query: Option<String>,
     pub date_filter: DateFilter,
@@ -59,7 +58,7 @@ pub enum SortFieldSale {
 #[derive(Debug)]
 pub struct PaginatedSales {
     /// La liste des ventes pour la page actuelle, avec le nom du vendeur et le nombre d'articles.
-    pub sales: Vec<SaleWithSeller>, // Changé pour une structure plus claire
+    pub sales: Vec<SaleWithSeller>,
     pub total_count: i64,
     pub page: i64,
     pub page_size: i64,
@@ -88,6 +87,23 @@ impl Default for SaleSearchParams {
     }
 }
 
+// --- Helper functions for conversions ---
+
+/// Converts BigDecimal to String for database storage
+fn bigdecimal_to_string(value: &BigDecimal) -> String {
+    value.to_string()
+}
+
+/// Converts NaiveDateTime to String for database storage
+fn datetime_to_string(value: &NaiveDateTime) -> String {
+    value.format("%Y-%m-%d %H:%M:%S%.f").to_string()
+}
+
+/// Generates a UUID as String
+fn generate_uuid_string() -> String {
+    uuid::Uuid::new_v4().to_string()
+}
+
 // --- Fonctions CRUD et de recherche ---
 
 /// Crée une nouvelle vente à partir des données fournies,
@@ -102,17 +118,23 @@ pub fn create_sale(data: CreateSaleData) -> AppResult<Receipt> {
         let mut validated_items = Vec::new();
 
         if data.items.is_empty() {
-            // return Err(DieselError::RollbackTransaction); // Ou une erreur personnalisée
             return Err(AppError::ValidationError(
                 "Aucun article dans la vente".to_string(),
             ));
         }
 
         for item_data in &data.items {
-            let product: Product = products::table.find(item_data.product_id).first(conn)?;
+            let product: Product = products::table.find(&item_data.product_id).first(conn)?;
+
+            // Parse price from String to BigDecimal
+            let product_price = product.get_price_as_decimal().map_err(|e| {
+                AppError::ValidationError(format!(
+                    "Prix invalide pour le produit {}: {}",
+                    product.name, e
+                ))
+            })?;
 
             if product.stock_in_sale_units < item_data.quantity {
-                // return Err(DieselError::RollbackTransaction); // Stock insuffisant
                 return Err(AppError::ValidationError(format!(
                     "Stock insuffisant pour le produit {} (ID: {})",
                     product.name, product.id
@@ -120,39 +142,51 @@ pub fn create_sale(data: CreateSaleData) -> AppResult<Receipt> {
             }
 
             let quantity_bd = BigDecimal::from(item_data.quantity);
-            let total_price = &product.price_per_sale_unit * quantity_bd;
+            let total_price = &product_price * &quantity_bd;
             total_amount += &total_price;
 
-            validated_items.push((item_data.clone(), product, total_price));
+            validated_items.push((item_data.clone(), product, product_price, total_price));
         }
 
         // --- 2. Création de la vente principale ---
         let seller_name: String = users::table
-            .find(data.user_id)
+            .find(&data.user_id)
             .select(users::name)
             .first(conn)?;
+
+        let sale_id = generate_uuid_string();
+        let current_time = datetime_to_string(&Utc::now().naive_utc());
+
         let new_sale = NewSale {
-            id: Uuid::new_v4(),
+            id: sale_id,
             user_id: data.user_id,
             sale_number: generate_sale_number(),
-            total_amount: total_amount.clone(),
-            date: Utc::now(),
+            total_amount: bigdecimal_to_string(&total_amount),
+            date: current_time,
         };
-        let created_sale: Sale = diesel::insert_into(sales::table)
+
+
+        diesel::insert_into(sales::table)
             .values(&new_sale)
-            .get_result(conn)?;
+            .execute(conn)?;
+        
+        let created_sale: Sale = sales::table
+            .order(sales::id.desc())
+            .first(conn)?;
 
         // --- 3. Insertion des articles de vente et mise à jour des stocks ---
         let mut receipt_items = Vec::new();
-        for (item_data, product, total_price) in validated_items {
+        for (item_data, product, unit_price, total_price) in validated_items {
+            let sale_item_id = generate_uuid_string();
             let new_sale_item = NewSaleItem {
-                id: Uuid::new_v4(),
-                sale_id: created_sale.id,
-                product_id: item_data.product_id,
+                id: sale_item_id,
+                sale_id: created_sale.id.clone(),
+                product_id: item_data.product_id.clone(),
                 quantity: item_data.quantity,
-                unit_price: product.price_per_sale_unit.clone(),
-                total_price,
+                unit_price: bigdecimal_to_string(&unit_price),
+                total_price: bigdecimal_to_string(&total_price),
             };
+
             diesel::insert_into(sale_items::table)
                 .values(&new_sale_item)
                 .execute(conn)?;
@@ -168,15 +202,19 @@ pub fn create_sale(data: CreateSaleData) -> AppResult<Receipt> {
                 product_name: product.name,
                 packaging_description: product.packaging_description,
                 quantity: new_sale_item.quantity,
-                unit_price: new_sale_item.unit_price,
-                total_price: new_sale_item.total_price,
+                unit_price: unit_price.clone(),
+                total_price: total_price.clone(),
             });
         }
 
         // --- 4. Génération du reçu ---
+        let sale_date = created_sale
+            .get_date_as_datetime()
+            .map_err(|e| AppError::ValidationError(format!("Date invalide: {}", e)))?;
+
         Ok(Receipt {
             sale_number: created_sale.sale_number,
-            date: created_sale.date.format("%d/%m/%Y %H:%M").to_string(),
+            date: sale_date.format("%d/%m/%Y %H:%M").to_string(),
             seller_name,
             items: receipt_items,
             total_amount,
@@ -203,7 +241,7 @@ pub fn get_sales_paginated(params: SaleSearchParams) -> AppResult<PaginatedSales
         let mut query = sales::table.inner_join(users::table).into_boxed();
 
         // Application du filtre utilisateur (le plus important pour les permissions)
-        if let Some(user_id) = params.user_id_filter {
+        if let Some(user_id) = &params.user_id_filter {
             query = query.filter(sales::user_id.eq(user_id));
         }
 
@@ -211,23 +249,28 @@ pub fn get_sales_paginated(params: SaleSearchParams) -> AppResult<PaginatedSales
         if let Some(pattern) = &search_pattern {
             query = query.filter(
                 sales::sale_number
-                    .ilike(pattern)
-                    .or(users::name.ilike(pattern)),
+                    .like(pattern) // SQLite uses LIKE instead of ILIKE
+                    .or(users::name.like(pattern)),
             );
         }
 
-        // Filtre par date
+        // Filtre par date - SQLite uses string comparison for dates
         match params.date_filter {
             DateFilter::Today => {
-                let start = Utc::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
-                let end = Utc::now().date_naive().and_hms_opt(23, 59, 59).unwrap();
+                let today = Utc::now().date_naive();
+                let start = datetime_to_string(&today.and_hms_opt(0, 0, 0).unwrap());
+                let end = datetime_to_string(&today.and_hms_opt(23, 59, 59).unwrap());
                 query = query.filter(sales::date.between(start, end));
             }
             DateFilter::Week => {
-                query = query.filter(sales::date.ge(Utc::now() - chrono::Duration::days(7)));
+                let week_ago =
+                    datetime_to_string(&(Utc::now() - chrono::Duration::days(7)).naive_utc());
+                query = query.filter(sales::date.ge(week_ago));
             }
             DateFilter::Month => {
-                query = query.filter(sales::date.ge(Utc::now() - chrono::Duration::days(30)));
+                let month_ago =
+                    datetime_to_string(&(Utc::now() - chrono::Duration::days(30)).naive_utc());
+                query = query.filter(sales::date.ge(month_ago));
             }
             DateFilter::All => {}
         }
@@ -268,7 +311,7 @@ pub fn get_sales_paginated(params: SaleSearchParams) -> AppResult<PaginatedSales
     let sale_ids = id_query
         .limit(params.page_size)
         .offset(offset)
-        .load::<Uuid>(&mut conn)?;
+        .load::<String>(&mut conn)?; // Changed from Uuid to String
 
     // Si la page est vide, retourner un résultat vide
     if sale_ids.is_empty() {
@@ -323,10 +366,10 @@ pub fn get_sales_paginated(params: SaleSearchParams) -> AppResult<PaginatedSales
         .filter(sale_items::sale_id.eq_any(&sale_ids))
         .group_by(sale_items::sale_id)
         .select((sale_items::sale_id, diesel::dsl::count(sale_items::id)))
-        .load::<(Uuid, i64)>(&mut conn)?;
+        .load::<(String, i64)>(&mut conn)?; // Changed from Uuid to String
 
     // Create a map for quick lookup of item counts
-    let item_count_map: std::collections::HashMap<Uuid, i64> = item_counts.into_iter().collect();
+    let item_count_map: std::collections::HashMap<String, i64> = item_counts.into_iter().collect();
 
     // Transformer en structure plus claire
     let sales_with_seller: Vec<SaleWithSeller> = sales_with_sellers
@@ -359,8 +402,8 @@ pub fn get_sales_paginated(params: SaleSearchParams) -> AppResult<PaginatedSales
 /// Récupère une vente spécifique avec ses articles et informations associées.
 /// Inclut une vérification des permissions : seul l'admin ou le propriétaire de la vente peut la voir.
 pub fn get_sale_details(
-    sale_id: Uuid,
-    current_user_id: Uuid,
+    sale_id: &str,         // Changed from Uuid to &str
+    current_user_id: &str, // Changed from Uuid to &str
     is_admin: bool,
 ) -> AppResult<SaleWithItems> {
     let mut conn = db::get_conn()?;
@@ -391,13 +434,13 @@ pub fn get_sale_details(
 
 /// Génère un numéro de vente unique.
 pub fn generate_sale_number() -> String {
-    format!("VTE-{}", &Utc::now().format("%Y%m%d%H%M%S"))
+    format!("VTE-{}", Utc::now().format("%Y%m%d%H%M%S"))
 }
 
 /// Fonction utilitaire pour créer les paramètres de recherche selon les permissions utilisateur
 pub fn create_search_params_for_user(
     base_params: SaleSearchParams,
-    current_user_id: Uuid,
+    current_user_id: String, // Changed from Uuid to String
     is_admin: bool,
 ) -> SaleSearchParams {
     SaleSearchParams {
@@ -411,7 +454,8 @@ pub fn create_search_params_for_user(
 }
 
 /// Génère un reçu/ticket de caisse pour une vente donnée
-pub fn generate_receipt(sale_id: Uuid) -> AppResult<Receipt> {
+pub fn generate_receipt(sale_id: &str) -> AppResult<Receipt> {
+    // Changed from Uuid to &str
     let mut conn = db::get_conn()?;
 
     // 1. Récupérer les informations de base de la vente et du vendeur
@@ -427,23 +471,38 @@ pub fn generate_receipt(sale_id: Uuid) -> AppResult<Receipt> {
         .load(&mut conn)?;
 
     // 3. Transformer les données en format Receipt
-    let receipt_items = items_with_products
-        .into_iter()
-        .map(|(item, product)| ReceiptItem {
+    let mut receipt_items = Vec::new();
+    for (item, product) in items_with_products {
+        let unit_price = item.get_unit_price_as_decimal().map_err(|e| {
+            crate::error::AppError::ValidationError(format!("Prix unitaire invalide: {}", e))
+        })?;
+        let total_price = item.get_total_price_as_decimal().map_err(|e| {
+            crate::error::AppError::ValidationError(format!("Prix total invalide: {}", e))
+        })?;
+
+        receipt_items.push(ReceiptItem {
             product_name: product.name,
             packaging_description: product.packaging_description,
             quantity: item.quantity,
-            unit_price: item.unit_price,
-            total_price: item.total_price,
-        })
-        .collect();
+            unit_price,
+            total_price,
+        });
+    }
 
     // 4. Construire le reçu final
+    let total_amount = sale.get_total_amount_as_decimal().map_err(|e| {
+        crate::error::AppError::ValidationError(format!("Montant total invalide: {}", e))
+    })?;
+
+    let sale_date = sale
+        .get_date_as_datetime()
+        .map_err(|e| crate::error::AppError::ValidationError(format!("Date invalide: {}", e)))?;
+
     Ok(Receipt {
         sale_number: sale.sale_number,
-        date: sale.date.format("%d/%m/%Y %H:%M").to_string(),
+        date: sale_date.format("%d/%m/%Y %H:%M").to_string(),
         seller_name,
         items: receipt_items,
-        total_amount: sale.total_amount,
+        total_amount,
     })
 }

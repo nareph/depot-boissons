@@ -18,7 +18,7 @@ pub fn show_and_update(user: &User) -> AppResult<bool> {
     let password_changed = Arc::new(Mutex::new(false));
     let password_changed_clone = password_changed.clone();
     let ui_handle = ui.as_weak();
-    let user_id = user.id;
+    let user_id = user.id.clone(); // Clone the user ID for use in the thread
 
     ui.on_confirm_clicked(move |new_password| {
         if let Some(ui) = ui_handle.upgrade() {
@@ -28,6 +28,8 @@ pub fn show_and_update(user: &User) -> AppResult<bool> {
             ui.set_status_text("Mise à jour en cours...".into());
 
             let thread_ui_handle = ui_handle.clone();
+            let user_id_for_thread = user_id.clone(); // Clone the Arc, not the String
+
 
             thread::spawn(move || {
                 let hash_result = bcrypt::hash(&new_password, bcrypt::DEFAULT_COST);
@@ -36,9 +38,9 @@ pub fn show_and_update(user: &User) -> AppResult<bool> {
                     if let Some(ui) = thread_ui_handle.upgrade() {
                         match hash_result {
                             Ok(hashed_password) => {
-                                match queries::update_user_password(user_id, &hashed_password) {
+                                match queries::update_user_password(&user_id_for_thread, &hashed_password) {
                                     Ok(_) => {
-                                        log::info!("Mot de passe mis à jour avec succès pour l'utilisateur ID {}", user_id);
+                                        log::info!("Mot de passe mis à jour avec succès pour l'utilisateur ID {}", user_id_for_thread);
                                         *password_changed_clone_inner.lock().unwrap() = true;
                                         let _ = ui.hide();
                                     }

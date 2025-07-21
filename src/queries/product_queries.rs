@@ -7,6 +7,7 @@ use crate::{
     schema,
 };
 use bigdecimal::BigDecimal;
+use chrono::Utc;
 use diesel::prelude::*;
 use uuid::Uuid;
 
@@ -100,8 +101,8 @@ pub fn get_products_paginated(params: ProductSearchParams) -> AppResult<Paginate
     if let Some(search) = &params.search_query {
         let search_pattern = format!("%{}%", search.to_lowercase());
         count_query = count_query.filter(
-            name.ilike(search_pattern.clone())
-                .or(packaging_description.ilike(search_pattern)),
+            name.like(search_pattern.clone()) // SQLite utilise LIKE au lieu d'ILIKE
+                .or(packaging_description.like(search_pattern)),
         );
     }
 
@@ -121,8 +122,8 @@ pub fn get_products_paginated(params: ProductSearchParams) -> AppResult<Paginate
     if let Some(search) = &params.search_query {
         let search_pattern = format!("%{}%", search.to_lowercase());
         data_query = data_query.filter(
-            name.ilike(search_pattern.clone())
-                .or(packaging_description.ilike(search_pattern)),
+            name.like(search_pattern.clone())
+                .or(packaging_description.like(search_pattern)),
         );
     }
 
@@ -131,6 +132,8 @@ pub fn get_products_paginated(params: ProductSearchParams) -> AppResult<Paginate
         StockFilter::InStock => data_query = data_query.filter(stock_in_sale_units.gt(0)),
         StockFilter::OutOfStock => data_query = data_query.filter(stock_in_sale_units.le(0)),
     }
+
+    // Application du tri
     match (params.sort_by, params.sort_order) {
         (SortFieldProduct::Name, SortOrder::Asc) => data_query = data_query.order(name.asc()),
         (SortFieldProduct::Name, SortOrder::Desc) => data_query = data_query.order(name.desc()),
@@ -183,26 +186,37 @@ pub fn create_product(
 
     let mut conn = db::get_conn()?;
 
+    let product_id = Uuid::new_v4().to_string(); // Convertir UUID en String
     let new_sku = generate_sku(&p_name, &p_packaging);
+    let price_str = p_price.to_string(); // Convertir BigDecimal en String
+    let now = Utc::now()
+        .naive_utc()
+        .format("%Y-%m-%d %H:%M:%S%.f")
+        .to_string();
 
     let new_product = NewProduct {
-        id: Uuid::new_v4(),
+        id: product_id.clone(),
         name: p_name,
         packaging_description: p_packaging,
         sku: Some(new_sku),
         stock_in_sale_units: p_stock,
-        price_per_sale_unit: p_price,
+        price_per_sale_unit: price_str,
     };
 
     diesel::insert_into(products)
         .values(&new_product)
-        .get_result(&mut conn)
+        .execute(&mut conn)?;
+
+    // Récupérer le produit après insertion
+    products
+        .find(product_id)
+        .first::<Product>(&mut conn)
         .map_err(Into::into)
 }
 
 /// Met à jour un produit existant.
 pub fn update_product(
-    product_id: Uuid,
+    product_id: &str, // Changé de Uuid à &str
     new_name: String,
     new_packaging: String,
     new_stock: i32,
@@ -212,21 +226,33 @@ pub fn update_product(
     let mut conn = db::get_conn()?;
 
     let new_sku = generate_sku(&new_name, &new_packaging);
+    let price_str = new_price.to_string(); // Convertir BigDecimal en String
+    let now = Utc::now()
+        .naive_utc()
+        .format("%Y-%m-%d %H:%M:%S%.f")
+        .to_string();
 
     diesel::update(products.find(product_id))
         .set((
-            name.eq(new_name),
-            packaging_description.eq(new_packaging),
-            sku.eq(Some(new_sku)),
+            name.eq(&new_name),
+            packaging_description.eq(&new_packaging),
+            sku.eq(Some(&new_sku)),
             stock_in_sale_units.eq(new_stock),
-            price_per_sale_unit.eq(new_price),
+            price_per_sale_unit.eq(&price_str),
+            updated_at.eq(&now),
         ))
-        .get_result(&mut conn)
+        .execute(&mut conn)?;
+
+    // Récupérer le produit mis à jour
+    products
+        .find(product_id)
+        .first::<Product>(&mut conn)
         .map_err(Into::into)
 }
 
 /// Supprime un produit. La suppression échouera si des ventes y sont liées (contrainte FK).
-pub fn delete_product(product_id: Uuid) -> AppResult<usize> {
+pub fn delete_product(product_id: &str) -> AppResult<usize> {
+    // Changé de Uuid à &str
     use crate::schema::products::dsl::*;
     let mut conn = db::get_conn()?;
     diesel::delete(products.find(product_id))
@@ -235,7 +261,8 @@ pub fn delete_product(product_id: Uuid) -> AppResult<usize> {
 }
 
 /// Récupère un produit par son ID.
-pub fn get_product_by_id(product_id: Uuid) -> AppResult<Product> {
+pub fn get_product_by_id(product_id: &str) -> AppResult<Product> {
+    // Changé de Uuid à &str
     use crate::schema::products::dsl::*;
     let mut conn = db::get_conn()?;
     products
@@ -262,7 +289,8 @@ fn generate_sku(product_name: &str, packaging: &str) -> String {
 }
 
 /// Vérifie si un produit peut être supprimé (pas de ventes associées)
-pub fn can_delete_product(p_id: Uuid) -> AppResult<bool> {
+pub fn can_delete_product(p_id: &str) -> AppResult<bool> {
+    // Changé de Uuid à &str
     use crate::schema::sale_items::dsl::*;
     let mut conn = db::get_conn()?;
 
@@ -295,12 +323,44 @@ pub fn get_product_details(product_id_str: &str) -> AppResult<Product> {
     use diesel::prelude::*;
 
     let mut conn = db::get_conn()?;
-    let product_id = Uuid::parse_str(product_id_str).map_err(|_| {
-        crate::error::AppError::ValidationError("ID de produit invalide".to_string())
-    })?;
 
+    // Pas besoin de parser l'UUID puisqu'on utilise maintenant des Strings
     products::table
-        .find(product_id)
+        .find(product_id_str)
         .first::<Product>(&mut conn)
         .map_err(Into::into)
+}
+
+/// Met à jour le stock d'un produit (utile pour les ventes)
+pub fn update_product_stock(product_id: &str, new_stock: i32) -> AppResult<()> {
+    use crate::schema::products::dsl::*;
+    let mut conn = db::get_conn()?;
+    let now = Utc::now()
+        .naive_utc()
+        .format("%Y-%m-%d %H:%M:%S%.f")
+        .to_string();
+
+    diesel::update(products.find(product_id))
+        .set((stock_in_sale_units.eq(new_stock), updated_at.eq(&now)))
+        .execute(&mut conn)?;
+
+    Ok(())
+}
+
+/// Diminue le stock d'un produit (pour les ventes)
+pub fn decrease_product_stock(product_id: &str, quantity: i32) -> AppResult<()> {
+    use crate::schema::products::dsl::*;
+    let mut conn = db::get_conn()?;
+
+    // Récupérer le produit actuel
+    let product = products.find(product_id).first::<Product>(&mut conn)?;
+
+    let new_stock = product.stock_in_sale_units - quantity;
+    if new_stock < 0 {
+        return Err(crate::error::AppError::ValidationError(
+            "Stock insuffisant".to_string(),
+        ));
+    }
+
+    update_product_stock(product_id, new_stock)
 }

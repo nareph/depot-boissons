@@ -5,6 +5,7 @@ use crate::{
     error::AppResult,
     models::{NewUser, User},
 };
+use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
 use rand::Rng;
 use rand::distr::Alphanumeric;
@@ -66,7 +67,7 @@ impl Default for UserPagination {
 
 /// Récupère tous les utilisateurs avec pagination, filtrage et tri
 pub fn get_users_paginated(
-    except_user_id: Uuid,
+    except_user_id: &str, // Changé de Uuid à &str
     filter: UserFilter,
     pagination: UserPagination,
 ) -> AppResult<UserListResult> {
@@ -81,7 +82,7 @@ pub fn get_users_paginated(
         if let Some(search) = &filter.search_term {
             if !search.trim().is_empty() {
                 let search_pattern = format!("%{}%", search.trim());
-                query = query.filter(name.ilike(search_pattern));
+                query = query.filter(name.like(search_pattern)); // SQLite utilise LIKE au lieu d'ILIKE
             }
         }
 
@@ -105,8 +106,8 @@ pub fn get_users_paginated(
         (UserSortBy::Name, SortOrder::Desc) => build_filtered_query().order(name.desc()),
         (UserSortBy::Role, SortOrder::Asc) => build_filtered_query().order(role.asc()),
         (UserSortBy::Role, SortOrder::Desc) => build_filtered_query().order(role.desc()),
-        (UserSortBy::CreatedAt, SortOrder::Asc) => build_filtered_query().order(id.asc()),
-        (UserSortBy::CreatedAt, SortOrder::Desc) => build_filtered_query().order(id.desc()),
+        (UserSortBy::CreatedAt, SortOrder::Asc) => build_filtered_query().order(created_at.asc()),
+        (UserSortBy::CreatedAt, SortOrder::Desc) => build_filtered_query().order(created_at.desc()),
     };
 
     // Application de la pagination
@@ -130,7 +131,8 @@ pub fn get_users_paginated(
 }
 
 /// Version simple pour la rétrocompatibilité
-pub fn get_all_users(except_user_id: Uuid) -> AppResult<Vec<User>> {
+pub fn get_all_users(except_user_id: &str) -> AppResult<Vec<User>> {
+    // Changé de Uuid à &str
     let result = get_users_paginated(
         except_user_id,
         UserFilter::default(),
@@ -143,7 +145,8 @@ pub fn get_all_users(except_user_id: Uuid) -> AppResult<Vec<User>> {
 }
 
 /// Récupère un utilisateur par son ID.
-pub fn get_user_by_id(user_id: Uuid) -> AppResult<User> {
+pub fn get_user_by_id(user_id: &str) -> AppResult<User> {
+    // Changé de Uuid à &str
     use crate::schema::users::dsl::*;
     let mut conn = db::get_conn()?;
     let user = users
@@ -158,33 +161,58 @@ pub fn create_user(new_name: &str, hashed_password: &str, new_role: &str) -> App
     use crate::schema::users::dsl::*;
     let mut conn = db::get_conn()?;
 
+    let user_id = Uuid::new_v4().to_string(); // Convertir UUID en String
+    let now = Utc::now()
+        .naive_utc()
+        .format("%Y-%m-%d %H:%M:%S%.f")
+        .to_string();
+
     let new_user = NewUser {
-        id: Uuid::new_v4(),
-        name: new_name,
-        password: hashed_password,
-        role: new_role,
-        must_change_password: true, // Toujours forcer le changement pour les nouveaux comptes
+        id: user_id.clone(),
+        name: new_name.to_string(),
+        password: hashed_password.to_string(),
+        role: new_role.to_string(),
+        must_change_password: 1, // SQLite utilise des entiers pour les booléens
     };
 
     diesel::insert_into(users)
         .values(&new_user)
-        .get_result(&mut conn)
+        .execute(&mut conn)?;
+
+    // Pour SQLite, on doit récupérer l'utilisateur après insertion
+    users
+        .find(user_id)
+        .select(User::as_select())
+        .first::<User>(&mut conn)
         .map_err(Into::into)
 }
 
 /// Met à jour le nom et le rôle d'un utilisateur.
-pub fn update_user_info(user_id: Uuid, new_name: &str, new_role: &str) -> AppResult<User> {
+pub fn update_user_info(user_id: &str, new_name: &str, new_role: &str) -> AppResult<User> {
+    // Changé de Uuid à &str
     use crate::schema::users::dsl::*;
     let mut conn = db::get_conn()?;
 
+    let now = Utc::now()
+        .naive_utc()
+        .format("%Y-%m-%d %H:%M:%S%.f")
+        .to_string();
+
     diesel::update(users.find(user_id))
-        .set((name.eq(new_name), role.eq(new_role)))
-        .get_result(&mut conn)
+        .set((name.eq(new_name), role.eq(new_role), updated_at.eq(&now)))
+        .execute(&mut conn)?;
+
+    // Récupérer l'utilisateur mis à jour
+    users
+        .find(user_id)
+        .select(User::as_select())
+        .first::<User>(&mut conn)
         .map_err(Into::into)
 }
 
 /// Supprime un utilisateur par son ID.
-pub fn delete_user(user_id_to_delete: Uuid) -> AppResult<usize> {
+pub fn delete_user(user_id_to_delete: &str) -> AppResult<usize> {
+    // Changé de Uuid à &str
     use crate::schema::users::dsl::*;
     let mut conn = db::get_conn()?;
     diesel::delete(users.find(user_id_to_delete))
@@ -195,7 +223,8 @@ pub fn delete_user(user_id_to_delete: Uuid) -> AppResult<usize> {
 // --- GESTION DE MOT DE PASSE ---
 
 /// Réinitialise le mot de passe d'un utilisateur et retourne le mot de passe temporaire.
-pub fn reset_user_password(user_id: Uuid) -> AppResult<String> {
+pub fn reset_user_password(user_id: &str) -> AppResult<String> {
+    // Changé de Uuid à &str
     // 1. Générer un mot de passe temporaire simple
     let temp_password: String = rand::rng()
         .sample_iter(&Alphanumeric)
@@ -209,11 +238,16 @@ pub fn reset_user_password(user_id: Uuid) -> AppResult<String> {
     // 3. Mettre à jour la BDD
     use crate::schema::users::dsl::*;
     let mut conn = db::get_conn()?;
+    let now = Utc::now()
+        .naive_utc()
+        .format("%Y-%m-%d %H:%M:%S%.f")
+        .to_string();
 
     diesel::update(users.find(user_id))
         .set((
             password.eq(hashed_password),
-            must_change_password.eq(true), // Très important
+            must_change_password.eq(1), // SQLite utilise 1 au lieu de true
+            updated_at.eq(&now),
         ))
         .execute(&mut conn)?;
 
@@ -233,7 +267,8 @@ pub fn get_available_roles() -> Vec<String> {
 }
 
 /// Compte le nombre total d'utilisateurs (utile pour les statistiques)
-pub fn count_users(except_user_id: Uuid) -> AppResult<i64> {
+pub fn count_users(except_user_id: &str) -> AppResult<i64> {
+    // Changé de Uuid à &str
     use crate::schema::users::dsl::*;
     let mut conn = db::get_conn()?;
     let count = users

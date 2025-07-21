@@ -69,7 +69,7 @@ fn run_app_flow() -> AppResult<()> {
         };
 
         // Gère le changement de mot de passe obligatoire
-        if user.must_change_password {
+        if user.must_change_password == 1 {
             if !change_password::show_and_update(&user)? {
                 log::info!("Changement de mot de passe annulé. Retour à l'écran de connexion.");
                 continue; // Retourne au début de la boucle `loop`

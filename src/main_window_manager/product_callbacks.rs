@@ -32,6 +32,7 @@ impl Default for ProductsState {
     }
 }
 
+
 /// Configure tous les callbacks liés à la gestion des produits sur la fenêtre principale.
 pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
     // État partagé pour les filtres et la pagination
@@ -291,7 +292,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
         main_window_handle.upgrade().unwrap().on_edit_product_clicked(move |product_id_str| {
             if let Some(_main_ui) = edit_handle.upgrade() {
                 if let Ok(product_id) = Uuid::parse_str(&product_id_str) {
-                    if let Ok(product) = queries::get_product_by_id(product_id) {
+                    if let Ok(product) = queries::get_product_by_id(&product_id.to_string()) {
                         if let Ok(dialog) = ui::EditProductDialog::new() {
                             dialog.set_product_id(product.id.to_string().into());
                             dialog.set_product_name(product.name.into());
@@ -305,7 +306,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                             dialog.on_save_clicked(move |id, name, packaging, stock, price_str| {
                                 if let Some(d) = dialog_handle.upgrade() {
                                     if let (Ok(uuid), Ok(price)) = (Uuid::parse_str(&id), bigdecimal::BigDecimal::from_str_radix(&price_str, 10)) {
-                                        match queries::update_product(uuid, name.to_string(), packaging.to_string(), stock, price) {
+                                        match queries::update_product(&uuid.to_string(), name.to_string(), packaging.to_string(), stock, price) {
                                             Ok(_) => {
                                                 load_fn_clone();
                                                 let _ = d.hide();
@@ -337,7 +338,8 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
         main_window_handle.upgrade().unwrap().on_delete_product_clicked(move |product_id_str, product_name| {
             if let Some(_main_ui) = delete_handle.upgrade() {
                 if let Ok(product_id) = Uuid::parse_str(&product_id_str) {
-                    match queries::can_delete_product(product_id) {
+                    let id = product_id.to_string();
+                    match queries::can_delete_product(&id) {
                         Ok(true) => {
                             if let Ok(dialog) = ui::DeleteProductDialog::new() {
                                 dialog.set_product_name(product_name.clone());
@@ -346,7 +348,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
                                 
                                 dialog.on_ok_clicked(move || {
                                     if let Some(d) = dialog_handle.clone().upgrade() {
-                                        if queries::delete_product(product_id).is_ok() {
+                                        if queries::delete_product(&id).is_ok() {
                                             load_fn_clone();
                                         }
                                         let _ = d.hide();

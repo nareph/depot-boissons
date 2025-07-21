@@ -6,6 +6,7 @@ use diesel::ConnectionError;
 use diesel::result::Error as DieselError;
 use rust_xlsxwriter::XlsxError;
 use slint::PlatformError;
+use std::env::VarError;
 use std::error::Error as StdError;
 use std::fmt;
 
@@ -15,34 +16,34 @@ pub type AppResult<T> = Result<T, AppError>;
 /// L'énumération principale pour toutes les erreurs possibles dans notre application.
 #[derive(Debug)]
 pub enum AppError {
-    /// Erreur provenant de la base de données (Diesel).
-    /// On utilise `Box<dyn StdError ...>` pour pouvoir y stocker `DieselError` et `ConnectionError`.
+    /// Erreur provenant de la base de données (Diesel) ou autre erreur externe "boxée".
     Database(Box<dyn StdError + Send + Sync>),
 
     /// Erreur provenant de l'interface graphique (Slint).
     Platform(PlatformError),
 
-    /// Erreur spécifique au processus de "seeding" (remplissage) de la base de données.
+    /// Erreur spécifique au processus de "seeding".
     Seeding(String),
 
-    /// Erreur spécifique au processus d'authentification (ex: mauvais mot de passe).
+    /// Erreur spécifique au processus d'authentification.
     Authentication(String),
 
-    /// Erreur d'autorisation (ex: accès refusé à une ressource).
+    /// Erreur d'autorisation (accès refusé).
     Unauthorized(String),
 
-    /// Erreur de validation des données
+    /// Erreur de validation des données (ex: champ manquant).
     ValidationError(String),
 
-    /// Erreur standard d'entrée/sortie.
+    /// Erreur standard d'entrée/sortie (utilisée par la sauvegarde de fichiers, PDF).
     Io(std::io::Error),
 
-    /// Erreur liée à l'impression
+    /// Erreur liée à l'impression.
     PrintingError(String),
 
+    /// Erreur spécifique à la génération de fichiers Excel.
     ExcelGeneration(XlsxError),
 
-    /// Erreur générique pour les messages d'erreur personnalisés créés dans notre code.
+    /// Erreur générique pour les messages d'erreur personnalisés.
     Generic(String),
 }
 
@@ -72,47 +73,37 @@ impl StdError for AppError {
             AppError::Platform(err) => Some(err),
             AppError::Io(err) => Some(err),
             AppError::ExcelGeneration(err) => Some(err),
-            AppError::Seeding(_)
-            | AppError::Authentication(_)
-            | AppError::Unauthorized(_)
-            | AppError::ValidationError(_)
-            | AppError::PrintingError(_)
-            | AppError::Generic(_) => None,
+            _ => None, // Pour les variantes basées sur String
         }
     }
 }
 
 // --- Blocs de conversion `From` pour l'opérateur `?` ---
 
-// Convertit les erreurs de requête Diesel en AppError::Database.
 impl From<DieselError> for AppError {
     fn from(err: DieselError) -> Self {
         AppError::Database(Box::new(err))
     }
 }
 
-// Convertit les erreurs de connexion Diesel en AppError::Database.
 impl From<ConnectionError> for AppError {
     fn from(err: ConnectionError) -> Self {
         AppError::Database(Box::new(err))
     }
 }
 
-// Convertit les erreurs de Bcrypt en AppError::Generic (ou une nouvelle variante si vous préférez).
 impl From<BcryptError> for AppError {
     fn from(err: BcryptError) -> Self {
         AppError::Generic(format!("Erreur de hachage : {}", err))
     }
 }
 
-// Convertit les erreurs de BigDecimal en AppError::Generic.
 impl From<ParseBigDecimalError> for AppError {
     fn from(err: ParseBigDecimalError) -> Self {
         AppError::Generic(format!("Erreur de parsing de nombre : {}", err))
     }
 }
 
-// Les autres conversions que vous aviez déjà.
 impl From<PlatformError> for AppError {
     fn from(err: PlatformError) -> Self {
         AppError::Platform(err)
@@ -122,6 +113,24 @@ impl From<PlatformError> for AppError {
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> Self {
         AppError::Io(err)
+    }
+}
+
+impl From<VarError> for AppError {
+    fn from(err: VarError) -> Self {
+        AppError::Generic(format!("Variable d'environnement manquante : {}", err))
+    }
+}
+
+impl From<Box<dyn StdError + Send + Sync>> for AppError {
+    fn from(err: Box<dyn StdError + Send + Sync>) -> Self {
+        AppError::Database(err)
+    }
+}
+
+impl From<XlsxError> for AppError {
+    fn from(err: XlsxError) -> Self {
+        AppError::ExcelGeneration(err)
     }
 }
 
@@ -137,38 +146,15 @@ impl From<&str> for AppError {
     }
 }
 
-// Ajout pour la compatibilité avec env::var
-impl From<std::env::VarError> for AppError {
-    fn from(err: std::env::VarError) -> Self {
-        AppError::Generic(format!(
-            "Variable d'environnement manquante ou invalide : {}",
-            err
-        ))
-    }
-}
-
-impl From<Box<dyn StdError + Send + Sync>> for AppError {
-    fn from(err: Box<dyn StdError + Send + Sync>) -> Self {
-        AppError::Database(err)
-    }
-}
-
-// Add conversion for escpos_rs errors
 impl From<escpos_rs::Error> for AppError {
     fn from(err: escpos_rs::Error) -> Self {
-        AppError::PrintingError(err.to_string())
+        AppError::PrintingError(format!("Erreur ESC/POS : {}", err))
     }
 }
 
-// Add conversion for serialport errors
-impl From<serialport::Error> for AppError {
-    fn from(err: serialport::Error) -> Self {
-        AppError::PrintingError(err.to_string())
-    }
-}
-
-impl From<XlsxError> for AppError {
-    fn from(err: XlsxError) -> Self {
-        AppError::ExcelGeneration(err)
+// Ajout pour la gestion des erreurs de parsing de dates si nécessaire
+impl From<chrono::ParseError> for AppError {
+    fn from(err: chrono::ParseError) -> Self {
+        AppError::Generic(format!("Erreur de parsing de date : {}", err))
     }
 }

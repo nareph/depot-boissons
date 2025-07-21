@@ -8,7 +8,7 @@ anyhow = "1.0.98"
 bcrypt = "0.17.0"
 bigdecimal = { version = "0.4.8", features = ["serde"] }
 chrono = { version = "0.4.41", features = ["serde"] }
-diesel = { version = "2.2.11", features = ["postgres", "uuid", "chrono", "numeric"] }
+diesel = { version = "2.2.11", features = ["sqlite", "uuid", "chrono", "r2d2"]  }
 diesel_migrations = "2.1.0"
 dirs = "6.0.0"
 dotenvy = "0.15.7"

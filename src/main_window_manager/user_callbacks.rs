@@ -2,7 +2,6 @@
 
 use crate::{queries, ui};
 use slint::{ComponentHandle, Model, Weak};
-use uuid::Uuid;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -10,7 +9,7 @@ use super::{show_info_dialog, show_error_dialog};
 
 /// Configure tous les callbacks liés à la gestion des utilisateurs pour la fenêtre principale.
 /// Cette fonction n'est appelée que si l'utilisateur connecté est un administrateur.
-pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
+pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: String) {
     // État partagé de la pagination et du filtrage
     let current_state = Rc::new(RefCell::new((
         queries::user_queries::UserFilter::default(),
@@ -34,7 +33,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                 state_borrow.1 = pagination.clone();
             }
 
-            match queries::user_queries::get_users_paginated(current_user_id, filter.clone(), pagination.clone()) {
+            match queries::user_queries::get_users_paginated(&current_user_id, filter.clone(), pagination.clone()) {
                 Ok(result) => {
                     let users_count = result.users.len();
                     log::info!("Résultat de la requête: {} utilisateurs trouvés, page {}/{}, total: {}", 
@@ -45,7 +44,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                         .map(|u| {
                             log::debug!("Utilisateur trouvé: {} ({})", u.name, u.role);
                             ui::UserUI {
-                                id: u.id.to_string().into(),
+                                id: u.id.into(), // Plus besoin de to_string() car id est déjà String
                                 name: u.name.into(),
                                 role: u.role.into(),
                             }
@@ -313,65 +312,64 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
         .unwrap()
         .on_edit_user_clicked(move |user_id_str| {
             if let Some(main_ui) = edit_handle.upgrade() {
-                if let Ok(user_id) = Uuid::parse_str(&user_id_str) {
-                    match queries::user_queries::get_user_by_id(user_id) {
-                        Ok(user_to_edit) => {
-                            if let Ok(dialog) = ui::EditUserDialog::new() {
-                                // Pré-remplir la boîte de dialogue avec les infos de l'utilisateur
-                                dialog.set_user_id(user_to_edit.id.to_string().into());
-                                dialog.set_username(user_to_edit.name.into());
+                // Plus besoin de parser UUID, on utilise directement le String
+                match queries::user_queries::get_user_by_id(&user_id_str) {
+                    Ok(user_to_edit) => {
+                        if let Ok(dialog) = ui::EditUserDialog::new() {
+                            // Pré-remplir la boîte de dialogue avec les infos de l'utilisateur
+                            dialog.set_user_id(user_to_edit.id.into()); // Plus besoin de to_string()
+                            dialog.set_username(user_to_edit.name.into());
 
-                                let roles = dialog.get_roles(); // Obtenir le VecModel des rôles
-                                if let Some(index) =
-                                    roles.iter().position(|r| r == user_to_edit.role.as_str())
-                                {
-                                    dialog.set_selected_role_index(index as i32);
-                                }
+                            let roles = dialog.get_roles(); // Obtenir le VecModel des rôles
+                            if let Some(index) =
+                                roles.iter().position(|r| r == user_to_edit.role.as_str())
+                            {
+                                dialog.set_selected_role_index(index as i32);
+                            }
 
-                                let main_ui_handle = main_ui.as_weak();
-                                let dialog_handle = dialog.as_weak();
-                                dialog.on_save_clicked(move |id, new_name, new_role| {
-                                    if let Some(d) = dialog_handle.upgrade() {
-                                        if let Ok(id_uuid) = Uuid::parse_str(&id) {
-                                            match queries::user_queries::update_user_info(
-                                                id_uuid, &new_name, &new_role,
-                                            ) {
-                                                Ok(_) => {
-                                                    log::info!(
-                                                        "Utilisateur '{}' mis à jour.",
-                                                        new_name
-                                                    );
-                                                    if let Some(ui) = main_ui_handle.upgrade() {
-                                                        ui.invoke_request_users();
-                                                    }
-                                                    let _ = d.hide();
-                                                }
-                                                Err(e) => {
-                                                    log::error!(
-                                                        "Erreur de mise à jour utilisateur : {}",
-                                                        e
-                                                    );
-                                                    d.set_status_message(
-                                                        "Erreur : Nom déjà utilisé?".into(),
-                                                    );
-                                                }
+                            let main_ui_handle = main_ui.as_weak();
+                            let dialog_handle = dialog.as_weak();
+                            let user_id_for_update = user_id_str.clone(); // Clone pour la closure
+                            dialog.on_save_clicked(move |_id, new_name, new_role| {
+                                if let Some(d) = dialog_handle.upgrade() {
+                                    // Utiliser directement user_id_for_update qui est déjà un String
+                                    match queries::user_queries::update_user_info(
+                                        &user_id_for_update, &new_name, &new_role,
+                                    ) {
+                                        Ok(_) => {
+                                            log::info!(
+                                                "Utilisateur '{}' mis à jour.",
+                                                new_name
+                                            );
+                                            if let Some(ui) = main_ui_handle.upgrade() {
+                                                ui.invoke_request_users();
                                             }
+                                            let _ = d.hide();
+                                        }
+                                        Err(e) => {
+                                            log::error!(
+                                                "Erreur de mise à jour utilisateur : {}",
+                                                e
+                                            );
+                                            d.set_status_message(
+                                                "Erreur : Nom déjà utilisé?".into(),
+                                            );
                                         }
                                     }
-                                });
+                                }
+                            });
 
-                                let dialog_handle_cancel = dialog.as_weak();
-                                dialog.on_cancel_clicked(move || {
-                                    if let Some(d) = dialog_handle_cancel.upgrade() {
-                                        let _ = d.hide();
-                                    }
-                                });
-                                let _ = dialog.run();
-                            }
+                            let dialog_handle_cancel = dialog.as_weak();
+                            dialog.on_cancel_clicked(move || {
+                                if let Some(d) = dialog_handle_cancel.upgrade() {
+                                    let _ = d.hide();
+                                }
+                            });
+                            let _ = dialog.run();
                         }
-                        Err(e) => {
-                            log::error!("Impossible de trouver l'utilisateur à éditer : {}", e)
-                        }
+                    }
+                    Err(e) => {
+                        log::error!("Impossible de trouver l'utilisateur à éditer : {}", e)
                     }
                 }
             }
@@ -389,15 +387,15 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
 
                     let main_ui_handle = ui.as_weak();
                     let dialog_handle = dialog.as_weak();
+                    let user_id_for_delete = user_id_str.clone(); // Clone pour la closure
 
                     dialog.on_ok_clicked(move || {
                         if let Some(d) = dialog_handle.upgrade() {
-                            if let Ok(user_id) = Uuid::parse_str(&user_id_str) {
-                                if queries::user_queries::delete_user(user_id).is_ok() {
-                                    log::info!("Utilisateur {} supprimé.", user_id_str);
-                                    if let Some(main_ui) = main_ui_handle.upgrade() {
-                                        main_ui.invoke_request_users();
-                                    }
+                            // Utiliser directement user_id_for_delete qui est déjà un String
+                            if queries::user_queries::delete_user(&user_id_for_delete).is_ok() {
+                                log::info!("Utilisateur {} supprimé.", user_id_for_delete);
+                                if let Some(main_ui) = main_ui_handle.upgrade() {
+                                    main_ui.invoke_request_users();
                                 }
                             }
                             let _ = d.hide();
@@ -431,28 +429,28 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid) {
                 );
                 
                 let dialog_handle = dialog.as_weak();
+                let user_id_for_reset = user_id_str.clone(); // Clone pour la closure
                 dialog.on_ok_clicked(move || {
                     // L'admin a confirmé, on procède à la réinitialisation
                     if let Some(d) = dialog_handle.upgrade() {
                         let _ = d.hide(); // Ferme la dialog de confirmation
                         
-                        if let Ok(user_id) = Uuid::parse_str(&user_id_str) {
-                            match queries::user_queries::reset_user_password(user_id) {
-                                Ok(temp_password) => {
-                                    // Afficher la popup d'information avec le mot de passe
-                                    show_info_dialog(
-                                        "Mot de Passe Réinitialisé",
-                                        &format!("Le mot de passe temporaire est :\n\n{}", temp_password),
-                                    );
-                                },
-                                Err(e) => {
-                                    log::error!("Erreur lors de la réinitialisation du mot de passe: {}", e);
-                                    show_error_dialog(
-                                        "Erreur de Réinitialisation",
-                                        "Impossible de réinitialiser le mot de passe. Veuillez réessayer plus tard.",
-                                    );
-                                },
-                            }
+                        // Utiliser directement user_id_for_reset qui est déjà un String
+                        match queries::user_queries::reset_user_password(&user_id_for_reset) {
+                            Ok(temp_password) => {
+                                // Afficher la popup d'information avec le mot de passe
+                                show_info_dialog(
+                                    "Mot de Passe Réinitialisé",
+                                    &format!("Le mot de passe temporaire est :\n\n{}", temp_password),
+                                );
+                            },
+                            Err(e) => {
+                                log::error!("Erreur lors de la réinitialisation du mot de passe: {}", e);
+                                show_error_dialog(
+                                    "Erreur de Réinitialisation",
+                                    "Impossible de réinitialiser le mot de passe. Veuillez réessayer plus tard.",
+                                );
+                            },
                         }
                     }
                 });

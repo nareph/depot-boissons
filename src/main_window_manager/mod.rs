@@ -64,7 +64,6 @@ fn setup_callbacks(
     logout_flag: std::rc::Rc<std::cell::RefCell<bool>>,
 ) {
     let main_window_handle = main_window.as_weak();
-    let current_user_id = user.id;
 
     // Déconnexion
     let logout_handle = main_window_handle.clone();
@@ -76,9 +75,11 @@ fn setup_callbacks(
         }
     });
 
-    // Changement de mot de passe
+    // Changement de mot de passe - Clone de l'ID utilisateur
+    let current_user_id = user.id.clone(); // Clone ici pour éviter les problèmes de borrow
     main_window.on_change_password_clicked(move || {
-        if let Err(e) = change_password_user::show(current_user_id) {
+        // Utiliser current_user_id cloné dans la closure
+        if let Err(e) = change_password_user::show(current_user_id.clone()) {
             log::error!(
                 "Erreur lors de l'ouverture de la fenêtre de changement de mot de passe: {}",
                 e
@@ -89,13 +90,23 @@ fn setup_callbacks(
     // Déléguer aux modules spécialisés
     dashboard_callbacks::setup(&main_window_handle);
     product_callbacks::setup(&main_window_handle);
-    sale_callbacks::setup(&main_window.as_weak(), user.id, user.role == "Admin");
+
+    // Clone des données utilisateur pour les callbacks de vente
+    let user_id_for_sales = user.id.clone();
+    let is_admin_for_sales = user.role == "Admin";
+    sale_callbacks::setup(
+        &main_window.as_weak(),
+        user_id_for_sales,
+        is_admin_for_sales,
+    );
 
     // Configuration des callbacks pour les imprimantes
     printer_callbacks::setup(&main_window_handle);
 
     if user.role == "Admin" {
-        user_callbacks::setup(&main_window_handle, user.id);
+        // Clone de l'ID utilisateur pour les callbacks admin
+        let user_id_for_admin = user.id.clone();
+        user_callbacks::setup(&main_window_handle, user_id_for_admin);
         reporting_callbacks::setup(&main_window_handle);
     }
 }

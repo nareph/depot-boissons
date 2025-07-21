@@ -8,8 +8,8 @@ use slint::{ComponentHandle, ModelRc, Weak};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    str::FromStr,
 };
-use uuid::Uuid;
 
 use super::{show_error_dialog, show_info_dialog};
 
@@ -22,12 +22,12 @@ pub struct SalesState {
     pub sort_order: queries::SortOrder,
     pub current_page: i64,
     pub page_size: i64,
-    pub current_user_id: Uuid,
+    pub current_user_id: String, // Changed from Uuid to String
     pub is_admin: bool,
 }
 
 impl SalesState {
-    pub fn new(current_user_id: Uuid, is_admin: bool) -> Self {
+    pub fn new(current_user_id: String, is_admin: bool) -> Self { // Changed parameter type
         Self {
             search_query: String::new(),
             date_filter: queries::DateFilter::All,
@@ -141,8 +141,8 @@ impl NewSaleState {
 }
 
 /// Configure les callbacks pour la gestion des ventes
-pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid, is_admin: bool) {
-    let sales_state = Arc::new(Mutex::new(SalesState::new(current_user_id, is_admin)));
+pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: String, is_admin: bool) { // Changed parameter type
+    let sales_state = Arc::new(Mutex::new(SalesState::new(current_user_id.clone(), is_admin)));
 
     // Fonction pour charger les ventes
     let load_sales = {
@@ -157,7 +157,7 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid, i
                     user_id_filter: if current_state.is_admin {
                         None
                     } else {
-                        Some(current_state.current_user_id)
+                        Some(current_state.current_user_id.clone()) // No longer need to_string()
                     },
                     search_query: if current_state.search_query.is_empty() {
                         None
@@ -176,15 +176,24 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid, i
                         let model = result
                             .sales
                             .into_iter()
-                            .map(|s| ui::SaleUI {
-                                id: s.sale.id.to_string().into(),
-                                sale_number: s.sale.sale_number.into(),
-                                date: s.sale.date.format("%d/%m/%Y %H:%M").to_string().into(),
-                                total_amount: format!("{} XAF", s.sale.total_amount).into(),
-                                seller_name: s.seller_name.into(),
-                                items_count: s.items_count as i32,
-                                items: ModelRc::new(slint::VecModel::default()),
-                                show_details: false,
+                            .map(|s| {
+                                // Parse date string for display (assuming format is stored as ISO string)
+                                let date_display = if let Ok(parsed_date) = chrono::NaiveDateTime::parse_from_str(&s.sale.date, "%Y-%m-%d %H:%M:%S%.f") {
+                                    parsed_date.format("%d/%m/%Y %H:%M").to_string()
+                                } else {
+                                    s.sale.date.clone() // Fallback to original string
+                                };
+
+                                ui::SaleUI {
+                                    id: s.sale.id.into(), // Already a String
+                                    sale_number: s.sale.sale_number.into(),
+                                    date: date_display.into(),
+                                    total_amount: format!("{} XAF", s.sale.total_amount).into(),
+                                    seller_name: s.seller_name.into(),
+                                    items_count: s.items_count as i32,
+                                    items: ModelRc::new(slint::VecModel::default()),
+                                    show_details: false,
+                                }
                             })
                             .collect::<Vec<_>>();
 
@@ -294,9 +303,10 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid, i
     // Callback pour ajouter une vente
     ui.on_add_sale_clicked({
         let ui_handle = main_window_handle.clone();
+        let current_user_id = current_user_id.clone();
         move || {
             if let Some(ui) = ui_handle.upgrade() {
-                show_new_sale_dialog(&ui, current_user_id);
+                show_new_sale_dialog(&ui, current_user_id.clone());
             }
         }
     });
@@ -309,77 +319,75 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>, current_user_id: Uuid, i
             if let Some(ui) = ui_handle.upgrade() {
                 let current_state = state.lock().unwrap().clone();
 
-                match Uuid::parse_str(&sale_id_str) {
-                    Ok(sale_id) => {
-                        match queries::get_sale_details(
-                            sale_id,
-                            current_state.current_user_id,
-                            current_state.is_admin,
-                        ) {
-                            Ok(sale_details) => {
-                                let items_ui = sale_details
-                                    .items
-                                    .into_iter()
-                                    .map(|(item, product)| ui::SaleItemUI {
-                                        id: item.id.to_string().into(),
-                                        product_name: product.name.into(),
-                                        packaging_description: product.packaging_description.into(),
-                                        quantity: item.quantity,
-                                        unit_price: format!("{} XAF", item.unit_price).into(),
-                                        total_price: format!("{} XAF", item.total_price).into(),
-                                    })
-                                    .collect::<Vec<_>>();
+                match queries::get_sale_details(
+                    &sale_id_str.to_string(), 
+                    &current_state.current_user_id,
+                    current_state.is_admin,
+                ) {
+                    Ok(sale_details) => {
+                        let items_ui = sale_details
+                            .items
+                            .into_iter()
+                            .map(|(item, product)| ui::SaleItemUI {
+                                id: item.id.into(), // Already a String
+                                product_name: product.name.into(),
+                                packaging_description: product.packaging_description.into(),
+                                quantity: item.quantity,
+                                unit_price: format!("{} XAF", item.unit_price).into(),
+                                total_price: format!("{} XAF", item.total_price).into(),
+                            })
+                            .collect::<Vec<_>>();
 
-                                let details_dialog = ui::SaleDetailsDialog::new().unwrap();
-                                details_dialog.set_sale_details(ui::SaleDetailsUI {
-                                    id: sale_details.sale.id.to_string().into(),
-                                    sale_number: sale_details.sale.sale_number.into(),
-                                    date: sale_details
-                                        .sale
-                                        .date
-                                        .format("%d/%m/%Y %H:%M")
-                                        .to_string()
-                                        .into(),
-                                    total_amount: format!("{} XAF", sale_details.sale.total_amount)
-                                        .into(),
-                                    seller_name: sale_details.seller_name.into(),
-                                    items: ModelRc::new(slint::VecModel::from(items_ui)),
-                                });
+                        let details_dialog = ui::SaleDetailsDialog::new().unwrap();
+                        
+                        // Parse date string for display
+                        let date_display = if let Ok(parsed_date) = chrono::NaiveDateTime::parse_from_str(&sale_details.sale.date, "%Y-%m-%d %H:%M:%S%.f") {
+                            parsed_date.format("%d/%m/%Y %H:%M").to_string()
+                        } else {
+                            sale_details.sale.date.clone()
+                        };
 
-                                // Gestion de l'impression
-                                let ui_weak = ui.as_weak();
-                                details_dialog.on_print_clicked(move || {
-                                    if let Some(_ui) = ui_weak.upgrade() {
-                                        match queries::generate_receipt(sale_id) {
-                                            Ok(receipt) => {
-                                                show_receipt_dialog(receipt);
-                                            }
-                                            Err(e) => {
-                                                show_error_dialog(
-                                                    "Erreur",
-                                                    &format!(
-                                                        "Impossible de générer le reçu: {}",
-                                                        e
-                                                    ),
-                                                );
-                                            }
-                                        }
+                        details_dialog.set_sale_details(ui::SaleDetailsUI {
+                            id: sale_details.sale.id.into(), // Already a String
+                            sale_number: sale_details.sale.sale_number.into(),
+                            date: date_display.into(),
+                            total_amount: format!("{} XAF", sale_details.sale.total_amount).into(),
+                            seller_name: sale_details.seller_name.into(),
+                            items: ModelRc::new(slint::VecModel::from(items_ui)),
+                        });
+
+                        // Gestion de l'impression
+                        let ui_weak = ui.as_weak();
+                        let sale_id_for_print = sale_id_str.to_string();
+                        details_dialog.on_print_clicked(move || {
+                            if let Some(_ui) = ui_weak.upgrade() {
+                                match queries::generate_receipt(&sale_id_for_print.clone()) {
+                                    Ok(receipt) => {
+                                        show_receipt_dialog(receipt);
                                     }
-                                });
-
-                                let details_dialog_weak = details_dialog.as_weak();
-                                details_dialog.on_close_clicked(move || {
-                                    if let Some(dd) = details_dialog_weak.upgrade() {
-                                        let _ = dd.hide();
+                                    Err(e) => {
+                                        show_error_dialog(
+                                            "Erreur",
+                                            &format!(
+                                                "Impossible de générer le reçu: {}",
+                                                e
+                                            ),
+                                        );
                                     }
-                                });
-
-                                let _ = details_dialog.run();
+                                }
                             }
-                            Err(e) => show_error_dialog("Erreur", &format!("{}", e)),
-                        }
+                        });
+
+                        let details_dialog_weak = details_dialog.as_weak();
+                        details_dialog.on_close_clicked(move || {
+                            if let Some(dd) = details_dialog_weak.upgrade() {
+                                let _ = dd.hide();
+                            }
+                        });
+
+                        let _ = details_dialog.run();
                     }
-                    Err(e) => show_error_dialog("Erreur", &format!("ID invalide: {}", e)),
+                    Err(e) => show_error_dialog("Erreur", &format!("{}", e)),
                 }
             }
         }
@@ -439,7 +447,7 @@ fn show_receipt_dialog(receipt: Receipt) {
     let _ = receipt_dialog.run();
 }
 
-fn show_new_sale_dialog(main_ui: &ui::MainWindow, current_user_id: Uuid) {
+fn show_new_sale_dialog(main_ui: &ui::MainWindow, current_user_id: String) { // Changed parameter type
     // Créer le dialogue
     let dialog = ui::NewSaleDialog::new().unwrap();
     let new_sale_state = Arc::new(Mutex::new(NewSaleState::new()));
@@ -449,12 +457,21 @@ fn show_new_sale_dialog(main_ui: &ui::MainWindow, current_user_id: Uuid) {
         Ok(products) => {
             let product_ui_items: Vec<ui::ProductUI> = products
                 .into_iter()
-                .map(|p| ui::ProductUI {
-                    id: p.id.to_string().into(),
-                    name: p.name.into(),
-                    stock: p.stock_in_sale_units.to_string().into(),
-                    price_offers: format!("{:.0}", p.price_per_sale_unit).into(),
-                    // packaging_description: p.packaging_description.into(),
+                .map(|p| {
+                    // Parse price string to BigDecimal for formatting
+                    let price_formatted = if let Ok(price) = BigDecimal::from_str(&p.price_per_sale_unit) {
+                        format!("{:.0}", price)
+                    } else {
+                        p.price_per_sale_unit.clone()
+                    };
+
+                    ui::ProductUI {
+                        id: p.id.into(), // Already a String
+                        name: p.name.into(),
+                        stock: p.stock_in_sale_units.to_string().into(),
+                        price_offers: price_formatted.into(),
+                        // packaging_description: p.packaging_description.into(),
+                    }
                 })
                 .collect();
 
@@ -480,24 +497,29 @@ fn show_new_sale_dialog(main_ui: &ui::MainWindow, current_user_id: Uuid) {
                     Ok(product) => {
                         // Vérifier le stock disponible
                         if quantity <= product.stock_in_sale_units as i32 {
-                            let mut state_guard = state.lock().unwrap();
-                            state_guard.add_item(
-                                product_id_str.to_string(),
-                                product.name,
-                                product.price_per_sale_unit,
-                                quantity,
-                                product.packaging_description,
-                            );
+                            // Convert price from String to BigDecimal
+                            if let Ok(price_decimal) = product.get_price_as_decimal() {
+                                let mut state_guard = state.lock().unwrap();
+                                state_guard.add_item(
+                                    product_id_str.to_string(),
+                                    product.name,
+                                    price_decimal,
+                                    quantity,
+                                    product.packaging_description,
+                                );
 
-                            // Mettre à jour l'UI
-                            let cart_items = state_guard.to_cart_ui_items();
-                            let total = format!("{:.0}", state_guard.total_amount);
+                                // Mettre à jour l'UI
+                                let cart_items = state_guard.to_cart_ui_items();
+                                let total = format!("{:.0}", state_guard.total_amount);
 
-                            drop(state_guard);
+                                drop(state_guard);
 
-                            d.set_cart_items(ModelRc::new(slint::VecModel::from(cart_items)));
-                            d.set_total_amount(total.into());
-                            d.set_status_message("".into());
+                                d.set_cart_items(ModelRc::new(slint::VecModel::from(cart_items)));
+                                d.set_total_amount(total.into());
+                                d.set_status_message("".into());
+                            } else {
+                                d.set_status_message("Erreur: prix invalide".into());
+                            }
                         } else {
                             d.set_status_message(
                                 format!(
@@ -590,6 +612,7 @@ fn show_new_sale_dialog(main_ui: &ui::MainWindow, current_user_id: Uuid) {
         let state = new_sale_state.clone();
         let dialog_weak = dialog.as_weak();
         let main_ui_weak = main_ui.as_weak();
+        let current_user_id = current_user_id.clone();
         move || {
             if let Some(d) = dialog_weak.upgrade() {
                 let state_guard = state.lock().unwrap();
@@ -601,12 +624,12 @@ fn show_new_sale_dialog(main_ui: &ui::MainWindow, current_user_id: Uuid) {
 
                 // Préparer les données pour la sauvegarde
                 let sale_data = CreateSaleData {
-                    user_id: current_user_id,
+                    user_id: current_user_id.clone(), // Already a String
                     items: state_guard
                         .cart_items
                         .values()
                         .map(|item| CreateSaleItemData {
-                            product_id: Uuid::parse_str(&item.product_id).unwrap(),
+                            product_id: item.product_id.clone(), // Already a String
                             quantity: item.quantity,
                         })
                         .collect(),
