@@ -8,25 +8,25 @@ L'application est pensée pour fonctionner **offline**, avec toutes les données
 
 ## ✨ Fonctionnalités Clés
 
--   **Tableau de Bord Intuitif** : Visualisez en temps réel le chiffre d'affaires du jour, le nombre de ventes et les produits à stock faible.
--   **Gestion des Produits (SKU)** : Chaque produit est géré comme une unité de vente unique (ex: "Casier de 12 bouteilles 65cl"), avec son propre stock et son propre prix, reflétant la logique métier d'un dépôt.
--   **Import en Lot de Produits** : 
-    -   Importation massive de produits via fichiers CSV.
-    -   Template CSV téléchargeable avec les colonnes requises (Nom, Packaging, Stock, Prix).
-    -   Validation préalable des données avec rapport d'erreurs détaillé.
-    -   Suivi de progression en temps réel lors de l'import.
-    -   Navigateur de fichiers intégré pour sélectionner facilement les fichiers CSV.
--   **Système de Vente Complet** :
-    -   Interface de point de vente (POS) pour créer de nouvelles ventes rapidement.
-    -   Gestion d'un panier d'achat avec validation des stocks en temps réel.
-    -   Génération et impression de tickets de caisse détaillés.
--   **Historique des Ventes** : Consultez l'historique complet des transactions avec des outils de recherche, de filtrage (par date) et de tri avancés.
--   **Gestion des Utilisateurs et Permissions** :
-    -   Système de rôles (Admin, Utilisateur).
-    -   Les administrateurs peuvent gérer les comptes utilisateurs (créer, modifier le rôle, supprimer).
-    -   Flux de travail sécurisé : les nouveaux utilisateurs et ceux dont le mot de passe a été réinitialisé doivent obligatoirement changer leur mot de passe à leur première connexion.
--   **Sécurité** : Mots de passe hachés avec `bcrypt`, assurant que personne, pas même un administrateur, ne peut voir les mots de passe des utilisateurs.
--   **Fonctionnement Offline** : Toutes les données sont locales, garantissant un accès rapide et une utilisation sans connexion internet.
+- **Tableau de Bord Intuitif** : Visualisez en temps réel le chiffre d'affaires du jour, le nombre de ventes et les produits à stock faible.
+- **Gestion des Produits (SKU)** : Chaque produit est géré comme une unité de vente unique avec son propre stock et prix.
+- **Reporting Comptable Avancé** :
+  - Analyse des ventes par période (7j/30j/année)
+  - Export PDF et Excel des données financières
+  - Top 5 des produits les plus vendus
+- **Import en Lot de Produits** :
+  - Validation des fichiers CSV avant import
+  - Suivi de progression en temps réel
+- **Système de Vente Complet** :
+  - Interface POS avec gestion de panier
+  - Validation des stocks en direct
+  - Impression de tickets de caisse
+- **Gestion des Utilisateurs** :
+  - Rôles Admin/Utilisateur
+  - Changement de mot de passe obligatoire à la première connexion
+- **Sécurité Renforcée** :
+  - Mots de passe hachés avec bcrypt
+  - Toutes les données stockées localement
 
 ## 🛠️ Stack Technique
 
@@ -62,27 +62,64 @@ L'application est pensée pour fonctionner **offline**, avec toutes les données
         ```
 
 3.  **Appliquer les Migrations** :
-    -   Cette commande va créer le fichier de base de données SQLite et toutes les tables nécessaires.
+    -   Cette commande va créer le fichier de base de données SQLite et toutes les tables nécessaires et un utilisateur admin par défaut.
     ```bash
     diesel migration run
     ```
 
 4.  **Peupler la base avec des données de test (Optionnel mais recommandé)** :
-    -   L'application contient un "seeder" pour remplir la base avec des utilisateurs, produits et ventes de démonstration.
+    -   L'application contient un "seeder" pour remplir la base avec des produits et ventes de démonstration.
     -   Lancez l'application avec l'argument `--seed`. Le double tiret (`--`) est important pour passer l'argument à votre programme et non à Cargo.
     ```bash
     cargo run -- --seed
     ```
-    -   **Identifiants par défaut** :
-        -   Utilisateur : `Administrateur`
-        -   Mot de passe : `admin123`
-        *(Il vous sera demandé de changer ce mot de passe à la première connexion.)*
 
 5.  **Lancer l'application normalement** :
     -   Pour les lancements suivants, utilisez simplement `cargo run`.
     ```bash
     cargo run
     ```
+
+## 🔐 Première Connexion
+
+### Identifiants Admin par Défaut
+Lors de la première installation, un utilisateur admin est automatiquement créé avec les credentials suivants :
+
+- **Nom d'utilisateur**: `admin`  
+- **Mot de passe**: `admin`  
+
+**Important**:  
+🔒 Pour des raisons de sécurité, le système **exigera** le changement de ce mot de passe lors de la première connexion.  
+⚠️ Changez-le immédiatement par un mot de passe fort et gardez-le secret !
+
+---
+
+### Processus de Première Connexion
+1. Lancez l'application
+2. Entrez les identifiants ci-dessus
+3. Suivez les instructions pour :
+   - Définir un nouveau mot de passe sécurisé
+4. Vous serez redirigé vers le tableau de bord
+
+> 💡 Conseil : Après la première connexion, créez des comptes supplémentaires pour vos collaborateurs via l'interface Admin.
+
+## 📊 Reporting Comptable
+
+La fonctionnalité de reporting offre des outils puissants pour l'analyse des ventes et la comptabilité.
+
+### Fonctionnalités
+
+- **Indicateurs Clés** :
+  - Chiffre d'affaires total
+  - Nombre de transactions
+  - Panier moyen
+- **Périodes Personnalisables** :
+  - 7 derniers jours
+  - 30 derniers jours
+  - Année en cours
+- **Exports Professionnels** :
+  - **PDF** : Rapport structuré prêt à imprimer
+  - **Excel** : Données brutes pour analyse approfondie
 
 ## 📊 Import de Produits en Lot
 

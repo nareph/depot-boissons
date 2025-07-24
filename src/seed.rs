@@ -19,23 +19,13 @@ pub fn seed_database(conn: &mut SqliteConnection) -> AppResult<()> {
     diesel::delete(sale_items::table).execute(conn)?;
     diesel::delete(sales::table).execute(conn)?;
     diesel::delete(products::table).execute(conn)?;
-    diesel::delete(users::table).execute(conn)?;
     log::info!("Tables nettoyées.");
 
-    log::info!("Création de l'utilisateur admin...");
-    let admin_password = hash("admin123", DEFAULT_COST)?;
-    let admin_id = Uuid::new_v4().to_string();
-    let admin_user = NewUser {
-        id: admin_id.clone(),
-        password: admin_password,
-        name: "Administrateur".to_string(),
-        role: "Admin".to_string(),
-        must_change_password: 1, // Changed from bool to i32
-    };
-    diesel::insert_into(users::table)
-        .values(&admin_user)
-        .execute(conn)?;
-    log::info!("Utilisateur admin créé.");
+    log::info!("Récupérer l'ID d'un admin existant...");
+    let admin_id = users::table
+        .filter(users::name.eq("admin"))
+        .select(users::id)
+        .first::<String>(conn)?;
 
     log::info!("Création des produits (SKUs)...");
 
