@@ -113,6 +113,7 @@ export component MainWindow inherits Window {
     callback change_password_clicked();
     callback logout_clicked();
     callback show_printer_config_clicked();
+    callback import_products_clicked();
     
     // === CALLBACKS POUR LES IMPRIMANTES ===
     callback test_printer(string);
@@ -241,6 +242,7 @@ export component MainWindow inherits Window {
                                 sort_products(sort_by, sort_order) => { root.sort_products(sort_by, sort_order); }
                                 change_page(page) => { root.product_change_page(page); }
                                 change_page_size(page_size) => { root.product_change_page_size(page_size); }
+                                import_products_clicked => { root.import_products_clicked(); }
                             }
                         }
 

@@ -24,6 +24,7 @@ export component ProductsView inherits VerticalLayout {
     callback sort_products(string, string);
     callback change_page(int);
     callback change_page_size(int);
+    callback import_products_clicked();
 
     padding: 25px;
     spacing: 15px;
@@ -45,6 +46,13 @@ export component ProductsView inherits VerticalLayout {
         if root.is_admin : HorizontalLayout {
             spacing: 10px;
             alignment: end;
+            
+            Button { 
+                text: "📦 Import en lot";
+                height: 40px; 
+                min-width: 140px;
+                clicked => { root.import_products_clicked(); } 
+            }
             
             Button { 
                 text: "➕ Ajouter";

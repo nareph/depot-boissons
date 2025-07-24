@@ -6,10 +6,13 @@ use crate::{
     models::{NewProduct, Product},
     schema,
 };
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, Num};
 use chrono::Utc;
 use diesel::prelude::*;
 use uuid::Uuid;
+
+use csv::ReaderBuilder;
+use std::io::Read;
 
 use super::SortOrder;
 
@@ -189,10 +192,10 @@ pub fn create_product(
     let product_id = Uuid::new_v4().to_string(); // Convertir UUID en String
     let new_sku = generate_sku(&p_name, &p_packaging);
     let price_str = p_price.to_string(); // Convertir BigDecimal en String
-    let now = Utc::now()
-        .naive_utc()
-        .format("%Y-%m-%d %H:%M:%S%.f")
-        .to_string();
+    // let now = Utc::now()
+    //     .naive_utc()
+    //     .format("%Y-%m-%d %H:%M:%S%.f")
+    //     .to_string();
 
     let new_product = NewProduct {
         id: product_id.clone(),
@@ -363,4 +366,258 @@ pub fn decrease_product_stock(product_id: &str, quantity: i32) -> AppResult<()> 
     }
 
     update_product_stock(product_id, new_stock)
+}
+
+/// Structure pour représenter un produit à importer
+#[derive(Debug)]
+pub struct ProductImportData {
+    pub name: String,
+    pub packaging_description: String,
+    pub stock_in_sale_units: i32,
+    pub price_per_sale_unit: BigDecimal,
+}
+
+/// Résultat de l'import en lot
+#[derive(Debug)]
+pub struct BatchImportResult {
+    pub success_count: usize,
+    pub error_count: usize,
+    pub errors: Vec<ImportError>,
+    pub imported_products: Vec<Product>,
+}
+
+/// Erreurs d'import
+#[derive(Debug)]
+pub struct ImportError {
+    pub line: usize,
+    pub product_name: String,
+    pub error: String,
+}
+
+/// Parse un fichier CSV et importe les produits en lot
+pub fn import_products_from_csv<R: Read>(reader: R) -> AppResult<BatchImportResult> {
+    let mut csv_reader = ReaderBuilder::new()
+        .has_headers(true)
+        .flexible(true)
+        .from_reader(reader);
+
+    let mut success_count = 0;
+    let mut error_count = 0;
+    let mut errors = Vec::new();
+    let mut imported_products = Vec::new();
+
+    // Lire et traiter chaque ligne
+    for (line_index, result) in csv_reader.records().enumerate() {
+        let line_number = line_index + 2; // +2 car ligne 1 = headers, et on commence à 0
+
+        match result {
+            Ok(record) => match parse_csv_record(&record, line_number) {
+                Ok(product_data) => {
+                    match create_product(
+                        product_data.name.clone(),
+                        product_data.packaging_description,
+                        product_data.stock_in_sale_units,
+                        product_data.price_per_sale_unit,
+                    ) {
+                        Ok(product) => {
+                            imported_products.push(product);
+                            success_count += 1;
+                        }
+                        Err(e) => {
+                            errors.push(ImportError {
+                                line: line_number,
+                                product_name: product_data.name,
+                                error: format!("Erreur création: {}", e),
+                            });
+                            error_count += 1;
+                        }
+                    }
+                }
+                Err(e) => {
+                    errors.push(ImportError {
+                        line: line_number,
+                        product_name: "Nom indisponible".to_string(),
+                        error: format!("Erreur parsing: {}", e),
+                    });
+                    error_count += 1;
+                }
+            },
+            Err(e) => {
+                errors.push(ImportError {
+                    line: line_number,
+                    product_name: "Ligne corrompue".to_string(),
+                    error: format!("Erreur CSV: {}", e),
+                });
+                error_count += 1;
+            }
+        }
+    }
+
+    Ok(BatchImportResult {
+        success_count,
+        error_count,
+        errors,
+        imported_products,
+    })
+}
+
+/// Parse une ligne CSV en ProductImportData
+fn parse_csv_record(
+    record: &csv::StringRecord,
+    line_number: usize,
+) -> Result<ProductImportData, String> {
+    if record.len() < 4 {
+        return Err(format!(
+            "Ligne {}: Nombre de colonnes insuffisant (attendu: 4, reçu: {})",
+            line_number,
+            record.len()
+        ));
+    }
+
+    let name = record.get(0).ok_or("Nom manquant")?.trim().to_string();
+
+    if name.is_empty() {
+        return Err("Le nom du produit ne peut pas être vide".to_string());
+    }
+
+    let packaging = record
+        .get(1)
+        .ok_or("Description du packaging manquante")?
+        .trim()
+        .to_string();
+
+    if packaging.is_empty() {
+        return Err("La description du packaging ne peut pas être vide".to_string());
+    }
+
+    let stock_str = record.get(2).ok_or("Stock manquant")?.trim();
+
+    let stock = stock_str
+        .parse::<i32>()
+        .map_err(|_| format!("Stock invalide '{}': doit être un nombre entier", stock_str))?;
+
+    if stock < 0 {
+        return Err("Le stock ne peut pas être négatif".to_string());
+    }
+
+    let price_str = record
+        .get(3)
+        .ok_or("Prix manquant")?
+        .trim()
+        .replace(",", "."); // Accepter les virgules comme séparateur décimal
+
+    let price = BigDecimal::from_str_radix(&price_str, 10)
+        .map_err(|_| format!("Prix invalide '{}': doit être un nombre décimal", price_str))?;
+
+    if price <= BigDecimal::from(0) {
+        return Err("Le prix doit être supérieur à 0".to_string());
+    }
+
+    Ok(ProductImportData {
+        name,
+        packaging_description: packaging,
+        stock_in_sale_units: stock,
+        price_per_sale_unit: price,
+    })
+}
+
+/// Génère un template CSV d'exemple
+pub fn generate_csv_template() -> String {
+    let header = "Nom,Packaging,Stock,Prix\n";
+    let examples = vec![
+        "Castel,Casier de 12 bouteilles 65cl,25,9600",
+        "33 Export,Casier de 12 bouteilles 65cl,30,9600",
+        "Guinness,Casier de 12 bouteilles 33cl,20,8400",
+        "Mutzig,Casier de 12 bouteilles 65cl,15,9600",
+        "Beaufort,Casier de 12 bouteilles 65cl,18,9200",
+        "Coca-Cola,Casier de 24 bouteilles 33cl,40,7200",
+        "Fanta Orange,Casier de 24 bouteilles 33cl,35,7200",
+        "Sprite,Casier de 24 bouteilles 33cl,25,7200",
+        "Djino Cocktail,Casier de 24 bouteilles 33cl,20,6000",
+        "Top Grenadine,Casier de 12 bouteilles 33cl,30,5400",
+        "Eau Tangui,Palette de 6 bouteilles 1.5L,50,1800",
+        "Eau Supermont,Palette de 6 bouteilles 1.5L,45,1800",
+        "Orangina,Casier de 12 bouteilles 25cl,22,8400",
+        "Isenbeck,Casier de 12 bouteilles 65cl,12,10200",
+    ];
+
+    format!("{}{}", header, examples.join("\n"))
+}
+
+/// Valide un fichier CSV avant import (sans créer les produits)
+pub fn validate_csv_file<R: Read>(reader: R) -> AppResult<ValidationResult> {
+    let mut csv_reader = ReaderBuilder::new()
+        .has_headers(true)
+        .flexible(true)
+        .from_reader(reader);
+
+    let mut valid_count = 0;
+    let mut error_count = 0;
+    let mut errors = Vec::new();
+    let mut duplicate_names = std::collections::HashSet::new();
+    let mut seen_names = std::collections::HashSet::new();
+
+    for (line_index, result) in csv_reader.records().enumerate() {
+        let line_number = line_index + 2;
+
+        match result {
+            Ok(record) => {
+                match parse_csv_record(&record, line_number) {
+                    Ok(product_data) => {
+                        // Vérifier les doublons dans le fichier
+                        if seen_names.contains(&product_data.name.to_lowercase()) {
+                            duplicate_names.insert(product_data.name.clone());
+                            errors.push(ValidationError {
+                                line: line_number,
+                                product_name: product_data.name,
+                                error: "Nom de produit dupliqué dans le fichier".to_string(),
+                            });
+                            error_count += 1;
+                        } else {
+                            seen_names.insert(product_data.name.to_lowercase());
+                            valid_count += 1;
+                        }
+                    }
+                    Err(e) => {
+                        errors.push(ValidationError {
+                            line: line_number,
+                            product_name: "Nom indisponible".to_string(),
+                            error: e,
+                        });
+                        error_count += 1;
+                    }
+                }
+            }
+            Err(e) => {
+                errors.push(ValidationError {
+                    line: line_number,
+                    product_name: "Ligne corrompue".to_string(),
+                    error: format!("Erreur CSV: {}", e),
+                });
+                error_count += 1;
+            }
+        }
+    }
+
+    Ok(ValidationResult {
+        valid_count,
+        error_count,
+        errors,
+        has_duplicates: !duplicate_names.is_empty(),
+    })
+}
+
+#[derive(Debug)]
+pub struct ValidationResult {
+    pub valid_count: usize,
+    pub error_count: usize,
+    pub errors: Vec<ValidationError>,
+    pub has_duplicates: bool,
+}
+
+#[derive(Debug)]
+pub struct ValidationError {
+    pub line: usize,
+    pub product_name: String,
+    pub error: String,
 }

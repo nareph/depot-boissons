@@ -1,0 +1,195 @@
+// src/ui/dialogs/import_products_dialog.slint
+import { Button, LineEdit, ScrollView, ProgressIndicator, StandardButton, VerticalBox } from "std-widgets.slint";
+
+export component ImportProductsDialog inherits Dialog {
+    in-out property <string> file_path: "";
+    in-out property <string> status_message: "";
+    in-out property <string> validation_result: "";
+    in-out property <float> import_progress: 0.0;
+    
+    callback download_template();
+    callback validate_file(string);
+    callback import_file(string);
+    callback browse_file() -> string;
+
+    title: "Import en lot de produits";
+    width: 400px;
+    height: 500px;
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        
+        Text { 
+            text: "📦 Import en lot de produits"; 
+            font-size: 18px; 
+            font-weight: 600; 
+            horizontal-alignment: center; 
+        }
+
+        // Instructions
+        Rectangle {
+            height: 120px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            border-width: 1px;
+            border-color: #ddd;
+            
+            VerticalBox {
+                padding: 15px;
+                spacing: 8px;
+                
+                Text {
+                    text: "📋 Instructions d'utilisation";
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+                
+                Text {
+                    text: "1. Téléchargez le template CSV ou créez un fichier avec ces colonnes : Nom, Packaging, Stock, Prix\n2. Remplissez votre fichier CSV avec les données des produits\n3. Validez votre fichier pour vérifier la syntaxe\n4. Importez les produits dans la base de données";
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        // Bouton télécharger template
+        Button {
+            text: "📁 Télécharger Template CSV";
+            clicked => {
+                root.download_template();
+            }
+        }
+
+        // Sélection de fichier
+        Text { text: "Fichier CSV à importer:"; }
+        HorizontalLayout {
+            spacing: 10px;
+            
+            file_input := LineEdit {
+                placeholder-text: "Chemin du fichier CSV...";
+                text: root.file_path;
+                edited => {
+                    root.file_path = self.text;
+                }
+            }
+            
+            Button {
+                text: "📁";
+                width: 40px;
+                clicked => {
+                    root.file_path = root.browse_file();
+                }
+            }
+        }
+
+        // Boutons d'action
+        HorizontalLayout {
+            spacing: 10px;
+            
+            Button {
+                text: "🔍 Valider le fichier";
+                enabled: root.file_path != "";
+                clicked => {
+                    root.validate_file(root.file_path);
+                }
+            }
+            
+            Button {
+                text: "⬆️ Importer maintenant";
+                enabled: root.file_path != "";
+                clicked => {
+                    root.import_file(root.file_path);
+                    // Effacer le résultat de validation quand on lance l'import
+                    root.validation_result = "";
+                }
+            }
+        }
+
+        // Barre de progression
+        if root.import_progress > 0 && root.import_progress < 100 : VerticalLayout {
+            spacing: 8px;
+            
+            Text {
+                text: "Import en cours...";
+                font-size: 14px;
+                horizontal-alignment: center;
+            }
+            
+            Rectangle {
+                height: 8px;
+                background: #e0e0e0;
+                border-radius: 4px;
+                
+                Rectangle {
+                    width: parent.width * (root.import_progress / 100.0);
+                    height: parent.height;
+                    background: #4CAF50;
+                    border-radius: 4px;
+                }
+            }
+        }
+
+        // Zone de résultats (validation OU import, mais pas les deux)
+        ScrollView {
+            height: 100px;
+            
+            if root.import_progress >= 100 && root.status_message != "" : Rectangle {
+                height: 80px;
+                background: #f5f5f5;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: #ddd;
+                
+                VerticalBox {
+                    padding: 15px;
+                    spacing: 5px;
+                    
+                    Text {
+                        text: "📊 Résultats d'import";
+                        font-size: 14px;
+                        font-weight: 600;
+                    }
+                    
+                    Text {
+                        text: root.status_message;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+
+            if root.validation_result != "" && root.import_progress == 0 : Rectangle {
+                height: 80px;
+                background: #f5f5f5;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: #ddd;
+                
+                VerticalBox {
+                    padding: 15px;
+                    spacing: 5px;
+                    
+                    Text {
+                        text: "🔍 Résultats de validation";
+                        font-size: 14px;
+                        font-weight: 600;
+                    }
+                    
+                    Text {
+                        text: root.validation_result;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                    }
+                }
+            }
+        }
+
+        // Espaceur pour pousser le bouton vers le bas
+        Rectangle { 
+            height: 1px; 
+        }
+    }
+
+    StandardButton { kind: cancel; }
+}

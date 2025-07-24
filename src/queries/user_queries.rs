@@ -162,10 +162,10 @@ pub fn create_user(new_name: &str, hashed_password: &str, new_role: &str) -> App
     let mut conn = db::get_conn()?;
 
     let user_id = Uuid::new_v4().to_string(); // Convertir UUID en String
-    let now = Utc::now()
-        .naive_utc()
-        .format("%Y-%m-%d %H:%M:%S%.f")
-        .to_string();
+    // let now = Utc::now()
+    //     .naive_utc()
+    //     .format("%Y-%m-%d %H:%M:%S%.f")
+    //     .to_string();
 
     let new_user = NewUser {
         id: user_id.clone(),

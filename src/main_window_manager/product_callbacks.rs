@@ -382,6 +382,179 @@ pub fn setup(main_window_handle: &Weak<ui::MainWindow>) {
         });
     }
 
+    // --- IMPORT EN LOT DE PRODUITS ---
+    {
+        let load_fn = load_products.clone();
+        let import_handle = main_window_handle.clone();
+        
+        main_window_handle
+            .upgrade()
+            .unwrap()
+            .on_import_products_clicked(move || {
+                if let Some(_main_ui) = import_handle.upgrade() {
+                    if let Ok(dialog) = ui::ImportProductsDialog::new() {
+                        let dialog_handle = dialog.as_weak();
+                        let load_fn_clone = load_fn.clone();
+
+                        // pour parcourir les fichiers ***
+                        dialog.on_browse_file(move || {
+                            if let Some(path) = rfd::FileDialog::new()
+                                .add_filter("CSV Files", &["csv"])
+                                .set_title("Sélectionner un fichier CSV")
+                                .pick_file()
+                            {
+                                path.to_string_lossy().to_string().into()
+                            } else {
+                                "".into()
+                            }
+                        });
+
+                        // Template CSV
+                        let dialog_handle_template = dialog.as_weak();
+                        dialog.on_download_template(move || {
+                            let template = queries::generate_csv_template();
+                            let handle = dialog_handle_template.clone();
+                            
+                            if let Some(path) = rfd::FileDialog::new()
+                                .add_filter("CSV Files", &["csv"])
+                                .set_file_name("template_produits.csv")
+                                .save_file()
+                            
+                            {
+                                match std::fs::write(&path, template.as_bytes()) {
+                                    Ok(_) => {
+                                        // Retour sur le thread principal pour l'UI
+                                        if let Some(d) = handle.upgrade() {
+                                            show_info_dialog(
+                                                "Template sauvegardé", 
+                                                &format!("Le template CSV a été sauvegardé avec succès dans:\n{}", path.display())
+                                            );
+                                        }
+                                    }
+                                    Err(e) => {
+                                        if let Some(_d) = handle.upgrade() {
+                                            show_error_dialog(
+                                                "Erreur de sauvegarde",
+                                                &format!("Impossible de sauvegarder le template: {}", e)
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        // Import du fichier
+                        dialog.on_import_file(move |file_path| {
+                            if let Some(d) = dialog_handle.upgrade() {
+                                d.set_status_message("Import en cours...".into());
+                                d.set_import_progress(0.0);
+                                
+                                match std::fs::File::open(file_path.to_string()) {
+                                    Ok(file) => {
+                                        match queries::import_products_from_csv(file) {
+                                            Ok(result) => {
+                                                let message = format!(
+                                                    "Import terminé!\n✅ {} produits importés avec succès\n❌ {} erreurs\n\nDétails des erreurs:",
+                                                    result.success_count,
+                                                    result.error_count
+                                                );
+                                                
+                                                let mut full_message = message;
+                                                for (i, error) in result.errors.iter().take(10).enumerate() {
+                                                    full_message.push_str(&format!(
+                                                        "\n• Ligne {}: {} - {}",
+                                                        error.line,
+                                                        error.product_name,
+                                                        error.error
+                                                    ));
+                                                }
+                                                
+                                                if result.errors.len() > 10 {
+                                                    full_message.push_str(&format!(
+                                                        "\n... et {} autres erreurs",
+                                                        result.errors.len() - 10
+                                                    ));
+                                                }
+                                                
+                                                d.set_status_message(full_message.into());
+                                                d.set_import_progress(100.0);
+                                                
+                                                if result.success_count > 0 {
+                                                    load_fn_clone();
+                                                }
+                                            }
+                                            Err(e) => {
+                                                d.set_status_message(format!("Erreur lors de l'import: {}", e).into());
+                                                d.set_import_progress(0.0);
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        d.set_status_message(format!("Impossible d'ouvrir le fichier: {}", e).into());
+                                    }
+                                }
+                            }
+                        });
+
+                        // Validation préalable
+                        let dialog_handle_validate = dialog.as_weak();
+                        dialog.on_validate_file(move |file_path| {
+                            if let Some(d) = dialog_handle_validate.upgrade() {
+                                match std::fs::File::open(file_path.to_string()) {
+                                    Ok(file) => {
+                                        match queries::validate_csv_file(file) {
+                                            Ok(validation) => {
+                                                let message = if validation.error_count == 0 {
+                                                    format!("✅ Validation réussie!\n{} produits valides prêts à être importés", validation.valid_count)
+                                                } else {
+                                                    let mut msg = format!(
+                                                        "⚠️ Validation terminée avec des erreurs:\n✅ {} lignes valides\n❌ {} erreurs\n\nPremières erreurs:",
+                                                        validation.valid_count,
+                                                        validation.error_count
+                                                    );
+                                                    
+                                                    for error in validation.errors.iter().take(5) {
+                                                        msg.push_str(&format!(
+                                                            "\n• Ligne {}: {}",
+                                                            error.line,
+                                                            error.error
+                                                        ));
+                                                    }
+                                                    
+                                                    if validation.errors.len() > 5 {
+                                                        msg.push_str(&format!("\n... et {} autres erreurs", validation.errors.len() - 5));
+                                                    }
+                                                    
+                                                    msg
+                                                };
+                                                
+                                                d.set_validation_result(message.into());
+                                            }
+                                            Err(e) => {
+                                                d.set_validation_result(format!("Erreur de validation: {}", e).into());
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {
+                                        d.set_validation_result(format!("Impossible d'ouvrir le fichier: {}", e).into());
+                                    }
+                                }
+                            }
+                        });
+
+                        let dialog_handle_cancel = dialog.as_weak();
+                        dialog.on_cancel_clicked(move || {
+                            if let Some(d) = dialog_handle_cancel.upgrade() {
+                                let _ = d.hide();
+                            }
+                        });
+
+                        let _ = dialog.run();
+                    }
+                }
+            });
+    }
+
     // Chargement initial des produits
     if let Some(ui) = main_window_handle.upgrade() {
         // Initialiser les propriétés de l'interface
