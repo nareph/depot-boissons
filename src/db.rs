@@ -7,7 +7,7 @@ use dotenvy::dotenv;
 use std::env;
 
 pub const MIGRATIONS: EmbeddedMigrations =
-    embed_migrations!("migrations/2025-06-22-213540_create_initial_tables"); 
+    embed_migrations!("migrations"); 
 
 /// Initialise la base de données et exécute les migrations en attente.
 pub fn init() -> AppResult<()> {
